@@ -143,10 +143,10 @@ module.exports = {
                     
                     if (game.status === 'joué' && game.score1 !== undefined && game.score2 !== undefined) {
                         weekContent += `${team1Icon} **${game.team1}** ${game.score1} - ${game.score2} **${game.team2}** ${team2Icon}\n`;
-                        weekContent += `📅 ${formatDate(game.date)} | � Match ${game.id}\n\n`;
+                        weekContent += `📅 ${formatDate(game.date)} | id match ${game.id}\n\n`;
                     } else {
                         weekContent += `⚽ **${game.team1}** vs **${game.team2}**\n`;
-                        weekContent += `📅 ${formatDate(game.date)} | 🆔 Match ${game.id} | 📊 ${game.status || 'Non défini'}\n\n`;
+                        weekContent += `📅 ${formatDate(game.date)} | id match ${game.id} | 📊 ${game.status || 'Non défini'}\n\n`;
                     }
                 });
                 

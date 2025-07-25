@@ -104,20 +104,7 @@ module.exports = {
                     
                     components.push(divisionRow);
                     
-                    // Troisième rangée : Boutons matchs pour les 5 premières divisions
-                    const matchsRow = new ActionRowBuilder();
-                    divisionsToShow.forEach(division => {
-                        matchsRow.addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`matchs_division_${division.id}_page_1`)
-                                .setLabel(`Matchs ${division.name ? division.name.substring(0, 8) : `Div ${division.id}`}`)
-                                .setStyle(ButtonStyle.Secondary)
-                                .setEmoji('⚽')
-                        );
-                    });
-                    components.push(matchsRow);
-                    
-                    // Quatrième rangée : Si plus de 5 divisions
+                    // Troisième rangée : Si plus de 5 divisions
                     if (divisions.length > 5) {
                         const remainingDivisions = divisions.slice(5, 10); // 5 divisions supplémentaires
                         const additionalDivisionRow = new ActionRowBuilder();
@@ -133,22 +120,6 @@ module.exports = {
                         });
                         
                         components.push(additionalDivisionRow);
-                        
-                        // Cinquième rangée : Boutons matchs pour les divisions supplémentaires
-                        if (remainingDivisions.length > 0) {
-                            const additionalMatchsRow = new ActionRowBuilder();
-                            remainingDivisions.forEach(division => {
-                                additionalMatchsRow.addComponents(
-                                    new ButtonBuilder()
-                                        .setCustomId(`matchs_division_${division.id}_page_1`)
-                                        .setLabel(`Matchs ${division.name ? division.name.substring(0, 8) : `Div ${division.id}`}`)
-                                        .setStyle(ButtonStyle.Secondary)
-                                        .setEmoji('⚽')
-                                );
-                            });
-                            
-                            components.push(additionalMatchsRow);
-                        }
                     }
                 }
                 

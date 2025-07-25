@@ -119,6 +119,42 @@ client.on('interactionCreate', async (interaction) => {
                 }
             }
         }
+        // Gestion des boutons de pagination des équipes
+        else if (interaction.customId.startsWith('teams_page_')) {
+            const pageNumber = parseInt(interaction.customId.replace('teams_page_', ''));
+            
+            if (isNaN(pageNumber)) {
+                await interaction.editReply({ content: 'Numéro de page invalide.', components: [], embeds: [] });
+                return;
+            }
+            
+            // Récupérer la commande teams et l'exécuter avec la nouvelle page
+            const teamsCommand = client.commands.get('teams');
+            if (teamsCommand) {
+                // Créer une fausse interaction avec la page demandée
+                const fakeOptions = {
+                    getInteger: (name) => name === 'page' ? pageNumber : null
+                };
+                
+                const fakeInteraction = {
+                    ...interaction,
+                    options: fakeOptions,
+                    reply: async (options) => await interaction.editReply(options),
+                    editReply: async (options) => await interaction.editReply(options)
+                };
+                
+                try {
+                    await teamsCommand.execute(fakeInteraction);
+                } catch (error) {
+                    console.error('Erreur lors de la pagination des équipes:', error);
+                    await interaction.editReply({ 
+                        content: 'Erreur lors du changement de page des équipes.', 
+                        components: [],
+                        embeds: []
+                    });
+                }
+            }
+        }
         // Gestion des boutons pour voir les détails d'une saison
         else if (interaction.customId.startsWith('season_details_')) {
             const seasonId = parseInt(interaction.customId.replace('season_details_', ''));
@@ -354,11 +390,115 @@ client.on('interactionCreate', async (interaction) => {
                 }
             }
         }
+        // Gestion des boutons pour voir les détails d'une équipe
+        else if (interaction.customId.startsWith('team_details_')) {
+            const teamId = parseInt(interaction.customId.replace('team_details_', ''));
+            
+            if (isNaN(teamId)) {
+                await interaction.editReply({ content: 'ID d\'équipe invalide.', components: [], embeds: [] });
+                return;
+            }
+            
+            // Récupérer la commande team et l'exécuter avec l'ID demandé
+            const teamCommand = client.commands.get('team');
+            if (teamCommand) {
+                // Créer une fausse interaction avec l'ID d'équipe demandé
+                const fakeOptions = {
+                    getInteger: (name) => name === 'id' ? teamId : null
+                };
+                
+                const fakeInteraction = {
+                    ...interaction,
+                    options: fakeOptions,
+                    reply: async (options) => await interaction.editReply(options),
+                    editReply: async (options) => await interaction.editReply(options)
+                };
+                
+                try {
+                    await teamCommand.execute(fakeInteraction);
+                } catch (error) {
+                    console.error('Erreur lors de l\'affichage des détails de l\'équipe:', error);
+                    await interaction.editReply({ 
+                        content: 'Erreur lors de la récupération des détails de l\'équipe.', 
+                        components: [],
+                        embeds: []
+                    });
+                }
+            }
+        }
         // Gestion par défaut pour les boutons non reconnus
         else {
             console.log(`Bouton non reconnu: ${interaction.customId}`);
             await interaction.editReply({ 
                 content: 'Bouton non reconnu ou non implémenté.', 
+                components: [],
+                embeds: []
+            });
+        }
+    } else if (interaction.isStringSelectMenu()) {
+        // Acquitter immédiatement l'interaction pour éviter les timeouts
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.deferUpdate();
+        }
+        
+        // Gestion du menu déroulant pour les équipes
+        if (interaction.customId === 'team_select_menu') {
+            const selectedValue = interaction.values[0];
+            
+            // Vérifier que la sélection correspond au format attendu
+            if (selectedValue.startsWith('team_details_')) {
+                const teamId = parseInt(selectedValue.replace('team_details_', ''));
+                
+                if (isNaN(teamId)) {
+                    await interaction.editReply({ content: 'ID d\'équipe invalide.', components: [], embeds: [] });
+                    return;
+                }
+                
+                // Récupérer la commande team et l'exécuter avec l'ID demandé
+                const teamCommand = client.commands.get('team');
+                if (teamCommand) {
+                    // Créer une fausse interaction avec l'ID d'équipe demandé
+                    const fakeOptions = {
+                        getInteger: (name) => name === 'id' ? teamId : null
+                    };
+                    
+                    const fakeInteraction = {
+                        ...interaction,
+                        options: fakeOptions,
+                        reply: async (options) => await interaction.editReply(options),
+                        editReply: async (options) => await interaction.editReply(options)
+                    };
+                    
+                    try {
+                        await teamCommand.execute(fakeInteraction);
+                    } catch (error) {
+                        console.error('Erreur lors de l\'affichage des détails de l\'équipe:', error);
+                        await interaction.editReply({ 
+                            content: 'Erreur lors de la récupération des détails de l\'équipe.', 
+                            components: [],
+                            embeds: []
+                        });
+                    }
+                } else {
+                    await interaction.editReply({ 
+                        content: 'Commande team non trouvée.', 
+                        components: [],
+                        embeds: []
+                    });
+                }
+            } else {
+                await interaction.editReply({ 
+                    content: 'Sélection invalide.', 
+                    components: [],
+                    embeds: []
+                });
+            }
+        }
+        // Gestion par défaut pour les menus déroulants non reconnus
+        else {
+            console.log(`Menu déroulant non reconnu: ${interaction.customId}`);
+            await interaction.editReply({ 
+                content: 'Menu déroulant non reconnu ou non implémenté.', 
                 components: [],
                 embeds: []
             });

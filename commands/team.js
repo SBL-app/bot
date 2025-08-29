@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { ApiClient, ApiError } = require('../utils/apiClient');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,73 +19,47 @@ module.exports = {
         
         try {
             const teamId = interaction.options.getInteger('id');
-            const startTime = Date.now();
+            const apiClient = new ApiClient();
             
             // Effectuer les requêtes vers l'API en parallèle
-            const [teamResponse, playersResponse] = await Promise.all([
-                fetch(`${config.apiUrl}/team/${teamId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'SBL-Discord-Bot',
-                        'Accept': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(15000)
-                }),
-                fetch(`${config.apiUrl}/players/${teamId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'SBL-Discord-Bot',
-                        'Accept': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(15000)
-                })
+            const [teamResult, playersResult] = await Promise.all([
+                apiClient.getTeam(teamId),
+                apiClient.getPlayers(teamId)
             ]);
             
-            const responseTime = Date.now() - startTime;
+            const responseTime = Math.max(teamResult.responseTime, playersResult.responseTime);
+            const teams = teamResult.data;
+            const players = playersResult.data;
             
-            // Vérifier la réponse de l'équipe
-            if (!teamResponse.ok) {
-                if (teamResponse.status === 404) {
-                    throw new Error(`Aucune équipe trouvée avec l'ID ${teamId}`);
-                }
-                throw new Error(`Erreur API équipe: ${teamResponse.status} ${teamResponse.statusText}`);
+            // Vérifier si l'équipe existe
+            if (!Array.isArray(teams) || teams.length === 0) {
+                throw new Error(`Aucune équipe trouvée avec l'ID ${teamId}`);
             }
             
-            const teamData = await teamResponse.json();
+            // L'API retourne un tableau, donc on prend le premier élément
+            const team = teams[0];
             
-            // Vérifier la réponse des joueurs (non critique si elle échoue)
-            let playersData = [];
+            // Vérifier si on a des joueurs (peut être vide mais ne doit pas errorer)
+            const playersData = Array.isArray(players) ? players : [];
             let playersError = null;
             
-            if (playersResponse.ok) {
-                try {
-                    playersData = await playersResponse.json();
-                    if (!Array.isArray(playersData)) {
-                        playersData = [];
-                        playersError = 'Format de données des joueurs non reconnu';
-                    }
-                } catch (error) {
-                    playersError = 'Impossible de parser les données des joueurs';
-                }
-            } else if (playersResponse.status === 404) {
+            if (playersData.length === 0) {
                 playersError = 'Aucun joueur trouvé pour cette équipe';
-            } else {
-                playersError = `Erreur API joueurs: ${playersResponse.status}`;
             }
             
             // Créer l'embed principal
             const embed = new EmbedBuilder()
                 .setColor(0x0099FF)
-                .setTitle(`👥 ${teamData.name || `Équipe ${teamId}`}`)
+                .setTitle(`👥 ${team.name || `Équipe ${teamId}`}`)
                 .setTimestamp()
                 .setFooter({ text: `Récupéré en ${responseTime}ms` });
             
             // Informations de base de l'équipe
             let basicInfo = '';
-            if (teamData.id) basicInfo += `🆔 **ID:** ${teamData.id}\n`;
-            if (teamData.name) basicInfo += `📛 **Nom:** ${teamData.name}\n`;
-            if (teamData.captain) basicInfo += `👑 **Capitaine:** ${teamData.captain}\n`;
-            if (teamData.founded) basicInfo += `📅 **Fondée:** ${teamData.founded}\n`;
+            if (team.id) basicInfo += `🆔 **ID:** ${team.id}\n`;
+            if (team.name) basicInfo += `📛 **Nom:** ${team.name}\n`;
+            if (team.captain) basicInfo += `👑 **Capitaine:** ${team.captain}\n`;
+            if (team.founded) basicInfo += `📅 **Fondée:** ${team.founded}\n`;
             if (teamData.description) basicInfo += `📝 **Description:** ${teamData.description}\n`;
             
             if (basicInfo) {
@@ -98,16 +72,16 @@ module.exports = {
             
             // Statistiques de performance
             let statsInfo = '';
-            if (teamData.wins !== undefined) statsInfo += `🏆 **Victoires:** ${teamData.wins}\n`;
-            if (teamData.losses !== undefined) statsInfo += `💔 **Défaites:** ${teamData.losses}\n`;
-            if (teamData.points !== undefined) statsInfo += `📊 **Points:** ${teamData.points}\n`;
-            if (teamData.draws !== undefined) statsInfo += `🤝 **Matchs nuls:** ${teamData.draws}\n`;
+            if (team.wins !== undefined) statsInfo += `🏆 **Victoires:** ${team.wins}\n`;
+            if (team.losses !== undefined) statsInfo += `💔 **Défaites:** ${team.losses}\n`;
+            if (team.points !== undefined) statsInfo += `📊 **Points:** ${team.points}\n`;
+            if (team.draws !== undefined) statsInfo += `🤝 **Matchs nuls:** ${team.draws}\n`;
             
             // Calculer le pourcentage de victoires si possible
-            if (teamData.wins !== undefined && teamData.losses !== undefined) {
-                const totalGames = teamData.wins + teamData.losses + (teamData.draws || 0);
+            if (team.wins !== undefined && team.losses !== undefined) {
+                const totalGames = team.wins + team.losses + (team.draws || 0);
                 if (totalGames > 0) {
-                    const winRate = ((teamData.wins / totalGames) * 100).toFixed(1);
+                    const winRate = ((team.wins / totalGames) * 100).toFixed(1);
                     statsInfo += `📈 **Taux de victoire:** ${winRate}%\n`;
                     statsInfo += `🎮 **Total matchs:** ${totalGames}`;
                 }
@@ -123,9 +97,9 @@ module.exports = {
             
             // Informations de division/saison
             let competitionInfo = '';
-            if (teamData.division) competitionInfo += `🏆 **Division:** ${teamData.division}\n`;
-            if (teamData.season) competitionInfo += `📅 **Saison:** ${teamData.season}\n`;
-            if (teamData.rank) competitionInfo += `🏅 **Classement:** ${teamData.rank}\n`;
+            if (team.division) competitionInfo += `🏆 **Division:** ${team.division}\n`;
+            if (team.season) competitionInfo += `📅 **Saison:** ${team.season}\n`;
+            if (team.rank) competitionInfo += `🏅 **Classement:** ${team.rank}\n`;
             
             if (competitionInfo) {
                 embed.addFields({
@@ -289,16 +263,22 @@ module.exports = {
         } catch (error) {
             let errorMessage = 'Erreur inconnue';
             
-            if (error.name === 'TimeoutError') {
+            if (error instanceof ApiError) {
+                if (error.isNotFound()) {
+                    errorMessage = `Aucune équipe trouvée avec l'ID ${interaction.options.getInteger('id')}`;
+                } else if (error.isTimeout()) {
+                    errorMessage = 'Timeout - L\'API ne répond pas dans les temps';
+                } else if (error.isServerError()) {
+                    errorMessage = 'Erreur interne du serveur API';
+                } else {
+                    errorMessage = `Erreur API: ${error.status} ${error.message}`;
+                }
+            } else if (error.name === 'TimeoutError') {
                 errorMessage = 'Timeout - L\'API ne répond pas dans les temps';
             } else if (error.code === 'ENOTFOUND') {
                 errorMessage = 'Impossible de résoudre le nom de domaine';
             } else if (error.code === 'ECONNREFUSED') {
                 errorMessage = 'Connexion refusée par le serveur';
-            } else if (error.message.includes('404') || error.message.includes('Aucune équipe')) {
-                errorMessage = error.message;
-            } else if (error.message.includes('500')) {
-                errorMessage = 'Erreur interne du serveur API';
             } else {
                 errorMessage = error.message || 'Erreur de connexion à l\'API';
             }
@@ -308,8 +288,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Équipe')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'ID demandé', value: interaction.options.getInteger('id').toString(), inline: false },
-                    { name: 'URLs tentées', value: `${config.apiUrl}/team/${interaction.options.getInteger('id')}\n${config.apiUrl}/players/${interaction.options.getInteger('id')}`, inline: false }
+                    { name: 'ID demandé', value: interaction.options.getInteger('id').toString(), inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

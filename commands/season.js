@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { ApiClient, ApiError } = require('../utils/apiClient');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,33 +19,14 @@ module.exports = {
         
         try {
             const seasonId = interaction.options.getInteger('id');
-            const apiUrl = `${config.apiUrl}/season/${seasonId}`;
-            const startTime = Date.now();
+            const apiClient = new ApiClient();
+            const result = await apiClient.getSeason(seasonId);
+            const season = result.data;
+            const responseTime = result.responseTime;
             
-            // Effectuer la requête vers l'API
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'SBL-Discord-Bot',
-                    'Accept': 'application/json'
-                },
-                // Timeout de 15 secondes
-                signal: AbortSignal.timeout(15000)
-            });
-            
-            const responseTime = Date.now() - startTime;
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error(`Saison avec l'ID ${seasonId} non trouvée`);
-                }
-                throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
-            }
-            
-            const season = await response.json();
-            
+            // L'API retourne maintenant un objet unique
             if (!season || !season.id) {
-                throw new Error('Format de données non reconnu de l\'API');
+                throw new Error(`Saison avec l'ID ${seasonId} non trouvée`);
             }
             
             // Créer l'embed avec les détails de la saison
@@ -168,7 +149,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Détails de la saison')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${config.apiUrl}/season/${interaction.options.getInteger('id')}`, inline: false }
+                    { name: 'ID recherché', value: `${interaction.options.getInteger('id')}`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

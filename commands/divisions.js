@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { ApiClient, ApiError } = require('../utils/apiClient');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,30 +19,10 @@ module.exports = {
         
         try {
             const seasonId = interaction.options.getInteger('saison');
-            const apiUrl = `${config.apiUrl}/division/season/${seasonId}`;
-            const startTime = Date.now();
-            
-            // Effectuer la requête vers l'API
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'SBL-Discord-Bot',
-                    'Accept': 'application/json'
-                },
-                // Timeout de 15 secondes
-                signal: AbortSignal.timeout(15000)
-            });
-            
-            const responseTime = Date.now() - startTime;
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error(`Aucune division trouvée pour la saison ${seasonId}`);
-                }
-                throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
-            }
-            
-            const divisions = await response.json();
+            const apiClient = new ApiClient();
+            const result = await apiClient.getSeasonDivisions(seasonId);
+            const divisions = result.data;
+            const responseTime = result.responseTime;
             
             if (!Array.isArray(divisions)) {
                 throw new Error('Format de données non reconnu de l\'API');
@@ -262,7 +242,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Divisions')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${config.apiUrl}/division/season/${interaction.options.getInteger('saison')}`, inline: false }
+                    { name: 'ID de saison recherché', value: `${interaction.options.getInteger('saison')}`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

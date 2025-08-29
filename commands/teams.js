@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-const config = require('../config.json');
+const { ApiClient, ApiError } = require('../utils/apiClient');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,30 +21,10 @@ module.exports = {
             const pageParam = interaction.options.getInteger('page') || 1;
             const teamsPerPage = 10; // Nombre d'équipes par page
             
-            const apiUrl = `${config.apiUrl}/teams`;
-            const startTime = Date.now();
-            
-            // Effectuer la requête vers l'API
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'User-Agent': 'SBL-Discord-Bot',
-                    'Accept': 'application/json'
-                },
-                // Timeout de 15 secondes
-                signal: AbortSignal.timeout(15000)
-            });
-            
-            const responseTime = Date.now() - startTime;
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error('Aucune équipe trouvée');
-                }
-                throw new Error(`Erreur API: ${response.status} ${response.statusText}`);
-            }
-            
-            const teams = await response.json();
+            const apiClient = new ApiClient();
+            const result = await apiClient.getTeams();
+            const teams = result.data;
+            const responseTime = result.responseTime;
             
             if (!Array.isArray(teams)) {
                 throw new Error('Format de données non reconnu de l\'API');
@@ -329,16 +309,22 @@ module.exports = {
         } catch (error) {
             let errorMessage = 'Erreur inconnue';
             
-            if (error.name === 'TimeoutError') {
+            if (error instanceof ApiError) {
+                if (error.isNotFound()) {
+                    errorMessage = 'Aucune équipe trouvée';
+                } else if (error.isTimeout()) {
+                    errorMessage = 'Timeout - L\'API ne répond pas dans les temps';
+                } else if (error.isServerError()) {
+                    errorMessage = 'Erreur interne du serveur API';
+                } else {
+                    errorMessage = `Erreur API: ${error.status} ${error.message}`;
+                }
+            } else if (error.name === 'TimeoutError') {
                 errorMessage = 'Timeout - L\'API ne répond pas dans les temps';
             } else if (error.code === 'ENOTFOUND') {
                 errorMessage = 'Impossible de résoudre le nom de domaine';
             } else if (error.code === 'ECONNREFUSED') {
                 errorMessage = 'Connexion refusée par le serveur';
-            } else if (error.message.includes('404') || error.message.includes('Aucune équipe')) {
-                errorMessage = error.message;
-            } else if (error.message.includes('500')) {
-                errorMessage = 'Erreur interne du serveur API';
             } else {
                 errorMessage = error.message || 'Erreur de connexion à l\'API';
             }
@@ -347,8 +333,7 @@ module.exports = {
                 .setColor(0xFF0000)
                 .setTitle('❌ Erreur - Équipes')
                 .addFields(
-                    { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${config.apiUrl}/teams`, inline: false }
+                    { name: 'Erreur', value: errorMessage, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

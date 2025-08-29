@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { ApiClient, ApiError } = require('../utils/apiClient');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,80 +19,19 @@ module.exports = {
         
         try {
             const divisionId = interaction.options.getInteger('id');
-            const startTime = Date.now();
+            const apiClient = new ApiClient();
             
-            // Faire les 3 requêtes en parallèle pour optimiser les performances
-            const [divisionResponse, gamesResponse, statsResponse] = await Promise.allSettled([
-                // 1. Informations de base de la division
-                fetch(`${config.apiUrl}/division/${divisionId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'SBL-Discord-Bot',
-                        'Accept': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(15000)
-                }),
-                // 2. Matchs de la division
-                fetch(`${config.apiUrl}/games/${divisionId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'SBL-Discord-Bot',
-                        'Accept': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(15000)
-                }),
-                // 3. Statistiques des équipes
-                fetch(`${config.apiUrl}/teamStats/division/${divisionId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'SBL-Discord-Bot',
-                        'Accept': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(15000)
-                })
-            ]);
+            // Récupérer toutes les informations de la division en une seule requête
+            const result = await apiClient.getDivisionDetails(divisionId);
+            const data = result.data;
+            const responseTime = result.responseTime;
             
-            const responseTime = Date.now() - startTime;
-            
-            // Vérifier si la requête principale (division) a réussi
-            if (divisionResponse.status === 'rejected' || !divisionResponse.value.ok) {
-                if (divisionResponse.value && divisionResponse.value.status === 404) {
-                    throw new Error(`Division avec l'ID ${divisionId} non trouvée`);
-                }
-                throw new Error(`Erreur lors de la récupération de la division: ${divisionResponse.reason || 'Erreur inconnue'}`);
+            // Vérifier si les données sont présentes
+            if (!data || !data.division) {
+                throw new Error(`Division avec l'ID ${divisionId} non trouvée`);
             }
             
-            const division = await divisionResponse.value.json();
-            
-            if (!division || !division.id) {
-                throw new Error('Format de données non reconnu pour la division');
-            }
-            
-            // Traiter les matchs (optionnel)
-            let games = [];
-            if (gamesResponse.status === 'fulfilled' && gamesResponse.value.ok) {
-                try {
-                    games = await gamesResponse.value.json();
-                    if (!Array.isArray(games)) {
-                        games = [];
-                    }
-                } catch (e) {
-                    games = [];
-                }
-            }
-            
-            // Traiter les statistiques (optionnel)
-            let teamStats = [];
-            if (statsResponse.status === 'fulfilled' && statsResponse.value.ok) {
-                try {
-                    teamStats = await statsResponse.value.json();
-                    if (!Array.isArray(teamStats)) {
-                        teamStats = [];
-                    }
-                } catch (e) {
-                    teamStats = [];
-                }
-            }
+            const { division, ranking, teams_count, games, teams } = data;
             
             // Créer l'embed principal
             const embed = new EmbedBuilder()
@@ -105,109 +44,61 @@ module.exports = {
             // Informations de base de la division
             let divisionInfo = '';
             divisionInfo += `🆔 **ID:** ${division.id}\n`;
-            if (division.season) {
-                divisionInfo += `📅 **Saison:** ${division.season}\n`;
-            }
-            if (division.description) {
-                divisionInfo += `📝 **Description:** ${division.description}\n`;
-            }
-            
-            // Informations sur les équipes (depuis les données de division)
-            if (division.teams && Array.isArray(division.teams)) {
-                divisionInfo += `👥 **Nombre d'équipes:** ${division.teams.length}`;
-            }
+            divisionInfo += `📅 **Saison:** ${division.season_name} (ID: ${division.season_id})\n`;
+            divisionInfo += `👥 **Nombre d'équipes:** ${teams_count}`;
             
             embed.addFields({
                 name: 'ℹ️ Informations générales',
-                value: divisionInfo || 'Aucune information disponible',
+                value: divisionInfo,
                 inline: false
             });
             
-            // Afficher les statistiques des équipes si disponibles
-            if (teamStats.length > 0) {
-                let statsText = '';
+            // Afficher le classement des équipes
+            if (ranking && ranking.length > 0) {
+                let rankingText = '';
                 
-                // Trier les équipes par points (décroissant), puis par victoires, puis par défaites
-                const sortedStats = [...teamStats].sort((a, b) => {
-                    if (b.points !== a.points) return b.points - a.points;
-                    if (b.wins !== a.wins) return b.wins - a.wins;
-                    return a.losses - b.losses;
-                });
-                
-                sortedStats.slice(0, 10).forEach((team, index) => {
-                    const position = index + 1;
+                ranking.forEach((team, index) => {
+                    const position = team.position || (index + 1);
                     const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
+                    const stats = team.stats;
                     
-                    statsText += `${medal} **${team.name || team.team_name || `Équipe ${team.team_id}`}**\n`;
-                    statsText += `   ├ ${team.wins || 0}V - ${team.losses || 0}D - ${team.points || 0} pts\n`;
-                    
-                    // Ajouter d'autres statistiques si disponibles
-                    if (team.goals_for !== undefined && team.goals_against !== undefined) {
-                        const goalDiff = (team.goals_for || 0) - (team.goals_against || 0);
-                        const goalDiffStr = goalDiff >= 0 ? `+${goalDiff}` : `${goalDiff}`;
-                        statsText += `   └ Buts: ${team.goals_for || 0}-${team.goals_against || 0} (${goalDiffStr})\n`;
-                    }
+                    rankingText += `${medal} **${team.team_name}**\n`;
+                    rankingText += `   📊 ${stats.wins}V - ${stats.losses}D - ${stats.ties}N | ${stats.points} pts\n\n`;
                 });
                 
-                if (teamStats.length > 10) {
-                    statsText += `\n... et ${teamStats.length - 10} autres équipes`;
-                }
-                
-                if (statsText.length > 1024) {
-                    statsText = statsText.substring(0, 1021) + '...';
+                // Limiter la longueur pour éviter la limite Discord
+                if (rankingText.length > 1000) {
+                    rankingText = rankingText.substring(0, 950) + '...\n*(Classement tronqué)*';
                 }
                 
                 embed.addFields({
-                    name: '📊 Classement et statistiques',
-                    value: statsText || 'Aucune statistique disponible',
-                    inline: false
-                });
-            } else if (division.teams && division.teams.length > 0) {
-                // Fallback: utiliser les données des équipes depuis la division
-                let teamsText = '';
-                
-                const sortedTeams = [...division.teams].sort((a, b) => {
-                    if (b.points !== a.points) return b.points - a.points;
-                    if (b.wins !== a.wins) return b.wins - a.wins;
-                    return a.losses - b.losses;
-                });
-                
-                sortedTeams.slice(0, 10).forEach((team, index) => {
-                    const position = index + 1;
-                    const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
-                    
-                    teamsText += `${medal} **${team.name}** (ID: ${team.id})\n`;
-                    teamsText += `   └ ${team.wins || 0}V - ${team.losses || 0}D - ${team.points || 0} pts\n`;
-                });
-                
-                if (division.teams.length > 10) {
-                    teamsText += `\n... et ${division.teams.length - 10} autres équipes`;
-                }
-                
-                embed.addFields({
-                    name: '👥 Équipes de la division',
-                    value: teamsText || 'Aucune équipe trouvée',
+                    name: '📊 Classement',
+                    value: rankingText,
                     inline: false
                 });
             }
             
-            // Informations sur les matchs
-            if (games.length > 0) {
-                let gamesInfo = `🎮 **Total des matchs:** ${games.length}\n`;
+            // Afficher les derniers matchs joués
+            if (games && games.length > 0) {
+                let gamesInfo = '';
+                let totalGames = 0;
+                let finishedGames = 0;
                 
-                // Compter les matchs terminés et à venir
-                const finishedGames = games.filter(game => 
-                    game.status === 'finished' || 
-                    (game.home_score !== undefined && game.away_score !== undefined)
-                ).length;
-                const pendingGames = games.length - finishedGames;
+                // Compter le total des matchs
+                games.forEach(week => {
+                    if (week.games && Array.isArray(week.games)) {
+                        totalGames += week.games.length;
+                        finishedGames += week.games.filter(game => game.status === 'joué').length;
+                    }
+                });
                 
+                gamesInfo += `🎮 **Total des matchs:** ${totalGames}\n`;
                 gamesInfo += `✅ **Matchs terminés:** ${finishedGames}\n`;
-                gamesInfo += `⏳ **Matchs en attente:** ${pendingGames}\n`;
+                gamesInfo += `⏳ **Matchs en attente:** ${totalGames - finishedGames}\n`;
                 
                 // Progression
-                if (games.length > 0) {
-                    const percentage = (finishedGames / games.length) * 100;
+                if (totalGames > 0) {
+                    const percentage = (finishedGames / totalGames) * 100;
                     const progressBar = generateProgressBar(percentage);
                     gamesInfo += `📊 **Progression:** ${progressBar} ${percentage.toFixed(1)}%`;
                 }
@@ -218,30 +109,38 @@ module.exports = {
                     inline: false
                 });
                 
-                // Afficher les derniers matchs
-                if (finishedGames > 0) {
-                    const recentFinished = games
-                        .filter(game => game.status === 'finished' || (game.home_score !== undefined && game.away_score !== undefined))
-                        .sort((a, b) => new Date(b.date || b.played_at || 0) - new Date(a.date || a.played_at || 0))
-                        .slice(0, 3);
-                    
-                    let recentGamesText = '';
-                    recentFinished.forEach(game => {
-                        const homeTeam = game.home_team || game.home_team_name || 'Équipe A';
-                        const awayTeam = game.away_team || game.away_team_name || 'Équipe B';
-                        const homeScore = game.home_score || 0;
-                        const awayScore = game.away_score || 0;
-                        
-                        recentGamesText += `⚽ **${homeTeam}** ${homeScore} - ${awayScore} **${awayTeam}**\n`;
-                    });
-                    
-                    if (recentGamesText) {
-                        embed.addFields({
-                            name: '🕒 Derniers résultats',
-                            value: recentGamesText,
-                            inline: false
+                // Afficher les derniers matchs joués
+                const recentGames = [];
+                games.forEach(week => {
+                    if (week.games) {
+                        week.games.forEach(game => {
+                            if (game.status === 'joué') {
+                                recentGames.push({
+                                    ...game,
+                                    week: week.week
+                                });
+                            }
                         });
                     }
+                });
+                
+                // Trier par date et prendre les 3 derniers
+                recentGames.sort((a, b) => new Date(b.date) - new Date(a.date));
+                const lastGames = recentGames.slice(0, 3);
+                
+                if (lastGames.length > 0) {
+                    let recentGamesText = '';
+                    lastGames.forEach(game => {
+                        const winnerIcon = game.winner === 1 ? '🟢' : game.winner === 2 ? '🔴' : '🟡';
+                        recentGamesText += `${winnerIcon} **${game.team1}** ${game.score1} - ${game.score2} **${game.team2}**\n`;
+                        recentGamesText += `   📅 ${game.date} • Semaine ${game.week}\n\n`;
+                    });
+                    
+                    embed.addFields({
+                        name: '🕒 Derniers résultats',
+                        value: recentGamesText,
+                        inline: false
+                    });
                 }
             } else {
                 embed.addFields({
@@ -259,16 +158,16 @@ module.exports = {
             actionRow.addComponents(
                 new ButtonBuilder()
                     .setCustomId(`matchs_division_${division.id}_page_1`)
-                    .setLabel(`Voir les matchs (${games.length})`)
+                    .setLabel(`Voir les matchs`)
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji('⚽')
             );
             
             // Bouton pour retourner aux divisions de la saison
-            if (division.season) {
+            if (division.season_id) {
                 actionRow.addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`divisions_season_${division.season}`)
+                        .setCustomId(`divisions_season_${division.season_id}`)
                         .setLabel('Divisions de la saison')
                         .setStyle(ButtonStyle.Secondary)
                         .setEmoji('🏆')
@@ -282,7 +181,9 @@ module.exports = {
                     .setLabel('Toutes les saisons')
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji('📅')
-            );            if (actionRow.components.length > 0) {
+            );
+            
+            if (actionRow.components.length > 0) {
                 components.push(actionRow);
             }
             
@@ -314,11 +215,8 @@ module.exports = {
                 .setTitle('❌ Erreur - Détails de la division')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URLs tentées', value: [
-                        `${config.apiUrl}/division/${interaction.options.getInteger('id')}`,
-                        `${config.apiUrl}/games/${interaction.options.getInteger('id')}`,
-                        `${config.apiUrl}/teamStats/division/${interaction.options.getInteger('id')}`
-                    ].join('\n'), inline: false }
+                    { name: 'ID recherché', value: `Division ID: ${interaction.options.getInteger('id')}`, inline: false },
+                    { name: 'Données tentées', value: 'Informations de la division, matchs et statistiques des équipes', inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

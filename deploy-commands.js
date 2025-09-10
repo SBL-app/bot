@@ -1,16 +1,16 @@
-const { REST, Routes } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const config = require('./config.json');
+import { REST, Routes } from 'discord.js';
+import { readdirSync } from 'fs';
+import { join } from 'path';
+import { token, applicationId } from './config.json';
 
 const commands = [];
 
 // Charger les commandes depuis le dossier commands
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandsPath = join(__dirname, 'commands');
+const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
+    const filePath = join(commandsPath, file);
     const command = require(filePath);
     
     if ('data' in command && 'execute' in command) {
@@ -21,7 +21,7 @@ for (const file of commandFiles) {
 }
 
 // Déployer les commandes
-const rest = new REST({ version: '10' }).setToken(config.token);
+const rest = new REST({ version: '10' }).setToken(token);
 
 (async () => {
     try {
@@ -29,7 +29,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
         // Déployer les commandes globalement
         const data = await rest.put(
-            Routes.applicationCommands(config.applicationId),
+            Routes.applicationCommands(applicationId),
             { body: commands },
         );
 

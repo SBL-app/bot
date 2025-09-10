@@ -1,7 +1,7 @@
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const config = require('./config.json');
+import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js';
+import { readdirSync } from 'fs';
+import { join } from 'path';
+import { token, applicationId } from './config.json';
 
 // Créer une nouvelle instance du client Discord
 const client = new Client({
@@ -17,11 +17,11 @@ client.commands = new Collection();
 const commands = [];
 
 // Charger les commandes depuis le dossier commands
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandsPath = join(__dirname, 'commands');
+const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
+    const filePath = join(commandsPath, file);
     const command = require(filePath);
     
     if ('data' in command && 'execute' in command) {
@@ -38,13 +38,13 @@ client.once('ready', async () => {
     console.log(`Bot connecté en tant que ${client.user.tag}!`);
     
     // Enregistrer les slash commands
-    const rest = new REST({ version: '10' }).setToken(config.token);
+    const rest = new REST({ version: '10' }).setToken(token);
     
     try {
         console.log('Début de l\'actualisation des commandes slash...');
         
         await rest.put(
-            Routes.applicationCommands(config.applicationId),
+            Routes.applicationCommands(applicationId),
             { body: commands }
         );
         
@@ -512,4 +512,4 @@ client.on('error', (error) => {
 });
 
 // Connexion du bot
-client.login(config.token);
+client.login(token);

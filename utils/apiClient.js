@@ -1,11 +1,11 @@
-const config = require('../config.json');
+import { apiUrl } from '../config.json';
 
 /**
  * Client API centralisé pour gérer les requêtes vers l'API SBL
  */
 class ApiClient {
     constructor() {
-        this.baseUrl = config.apiUrl.startsWith('http') ? config.apiUrl : `http://${config.apiUrl}`;
+        this.baseUrl = apiUrl.startsWith('http') ? apiUrl : `http://${apiUrl}`;
         this.timeout = 15000; // 15 secondes
         this.userAgent = 'SBL-Discord-Bot';
     }
@@ -262,4 +262,4 @@ class ApiError extends Error {
     }
 }
 
-module.exports = { ApiClient, ApiError };
+export default { ApiClient, ApiError };

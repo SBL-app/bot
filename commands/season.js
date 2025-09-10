@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { ApiClient, ApiError } from '../utils/apiClient';
+import { ApiClient, ApiError } from '../utils/apiClient.js';
 
 export const data = new SlashCommandBuilder()
     .setName('saison')

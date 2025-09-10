@@ -1,7 +1,14 @@
 import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js';
 import { readdirSync } from 'fs';
-import { join } from 'path';
-import { token, applicationId } from './config.json';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import config from './config.json' with { type: "json" };
+
+const { token, applicationId } = config;
+
+// Obtenir __dirname dans un module ES6
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Créer une nouvelle instance du client Discord
 const client = new Client({
@@ -16,26 +23,32 @@ const client = new Client({
 client.commands = new Collection();
 const commands = [];
 
-// Charger les commandes depuis le dossier commands
-const commandsPath = join(__dirname, 'commands');
-const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+// Fonction pour charger les commandes
+async function loadCommands() {
+    // Charger les commandes depuis le dossier commands
+    const commandsPath = join(__dirname, 'commands');
+    const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const filePath = join(commandsPath, file);
-    const command = require(filePath);
-    
-    if ('data' in command && 'execute' in command) {
-        client.commands.set(command.data.name, command);
-        commands.push(command.data.toJSON());
-        console.log(`Commande ${command.data.name} chargée.`);
-    } else {
-        console.log(`[ATTENTION] La commande dans ${filePath} manque d'une propriété "data" ou "execute" requise.`);
+    for (const file of commandFiles) {
+        const filePath = join(commandsPath, file);
+        const command = await import(filePath);
+        
+        if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+            commands.push(command.data.toJSON());
+            console.log(`Commande ${command.data.name} chargée.`);
+        } else {
+            console.log(`[ATTENTION] La commande dans ${filePath} manque d'une propriété "data" ou "execute" requise.`);
+        }
     }
 }
 
 // Event: Bot prêt
 client.once('ready', async () => {
     console.log(`Bot connecté en tant que ${client.user.tag}!`);
+    
+    // Charger les commandes
+    await loadCommands();
     
     // Enregistrer les slash commands
     const rest = new REST({ version: '10' }).setToken(token);

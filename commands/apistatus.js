@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { ApiClient } from '../utils/apiClient';
+import { ApiClient } from '../utils/apiClient.js';
 
 export const data = new SlashCommandBuilder()
     .setName('apistatus')

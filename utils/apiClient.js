@@ -1,4 +1,6 @@
-import { apiUrl } from '../config.json';
+import config from '../config.json' with { type: "json" };
+
+const { apiUrl } = config;
 
 /**
  * Client API centralisé pour gérer les requêtes vers l'API SBL
@@ -262,4 +264,4 @@ class ApiError extends Error {
     }
 }
 
-export default { ApiClient, ApiError };
+export { ApiClient, ApiError };

@@ -2,6 +2,8 @@ const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord
 const fs = require('fs');
 const path = require('path');
 const config = require('./config.json');
+const { initWeeklyScheduler } = require('./scheduler/weekly-messages');
+const { initDeadlineScheduler } = require('./scheduler/deadline-check');
 
 // Créer une nouvelle instance du client Discord
 const client = new Client({
@@ -49,6 +51,10 @@ client.once('ready', async () => {
         );
         
         console.log('Commandes slash actualisées avec succès!');
+
+        // Initialiser les schedulers
+        initWeeklyScheduler(client);
+        initDeadlineScheduler(client);
     } catch (error) {
         console.error('Erreur lors de l\'actualisation des commandes:', error);
     }

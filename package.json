@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "discord.js": "^14.21.0",
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",

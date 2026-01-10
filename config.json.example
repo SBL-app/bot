@@ -1,0 +1,5 @@
+{
+    "token": "YOUR_DISCORD_BOT_TOKEN_HERE",
+    "applicationId": "YOUR_APPLICATION_ID_HERE",
+    "apiUrl": "https://api.example.com"
+}

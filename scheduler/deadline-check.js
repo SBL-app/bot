@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 const settingsConfigPath = path.join(__dirname, '../config/settings.json');
 
@@ -44,7 +44,7 @@ function getNextDayOfWeek(dayName, time, baseDate = new Date()) {
 
 async function fetchCurrentSeasonWeek() {
     try {
-        const response = await fetch(`${config.apiUrl}/season/current/week`, {
+        const response = await fetch(`${API_URL}/season/current/week`, {
             headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
             signal: AbortSignal.timeout(15000)
         });
@@ -58,7 +58,7 @@ async function fetchCurrentSeasonWeek() {
 
 async function fetchUnscheduledGames(week, seasonId) {
     try {
-        const response = await fetch(`${config.apiUrl}/games/unscheduled?week=${week}&season_id=${seasonId}`, {
+        const response = await fetch(`${API_URL}/games/unscheduled?week=${week}&season_id=${seasonId}`, {
             headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
             signal: AbortSignal.timeout(15000)
         });
@@ -72,7 +72,7 @@ async function fetchUnscheduledGames(week, seasonId) {
 
 async function scheduleGame(gameId, date) {
     try {
-        const response = await fetch(`${config.apiUrl}/games/${gameId}/schedule`, {
+        const response = await fetch(`${API_URL}/games/${gameId}/schedule`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',

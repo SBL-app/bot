@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,7 +18,7 @@ module.exports = {
             const proposalId = interaction.options.getInteger('id');
 
             // Appeler l'API pour accepter la proposition
-            const response = await fetch(`${config.apiUrl}/match-proposals/${proposalId}`, {
+            const response = await fetch(`${API_URL}/match-proposals/${proposalId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ module.exports = {
             
             // Effectuer les requêtes vers l'API en parallèle
             const [teamResponse, playersResponse] = await Promise.all([
-                fetch(`${config.apiUrl}/team/${teamId}`, {
+                fetch(`${API_URL}/team/${teamId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -31,7 +31,7 @@ module.exports = {
                     },
                     signal: AbortSignal.timeout(15000)
                 }),
-                fetch(`${config.apiUrl}/players/${teamId}`, {
+                fetch(`${API_URL}/players/${teamId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -309,7 +309,7 @@ module.exports = {
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
                     { name: 'ID demandé', value: interaction.options.getInteger('id').toString(), inline: false },
-                    { name: 'URLs tentées', value: `${config.apiUrl}/team/${interaction.options.getInteger('id')}\n${config.apiUrl}/players/${interaction.options.getInteger('id')}`, inline: false }
+                    { name: 'URLs tentées', value: `${API_URL}/team/${interaction.options.getInteger('id')}\n${API_URL}/players/${interaction.options.getInteger('id')}`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

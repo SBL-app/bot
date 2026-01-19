@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const { EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 const channelsConfigPath = path.join(__dirname, '../config/channels.json');
 
@@ -16,7 +16,7 @@ function loadChannelsConfig() {
 }
 
 async function fetchCurrentSeasonWeek() {
-    const response = await fetch(`${config.apiUrl}/season/current/week`, {
+    const response = await fetch(`${API_URL}/season/current/week`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });
@@ -25,7 +25,7 @@ async function fetchCurrentSeasonWeek() {
 }
 
 async function fetchDivisions(seasonId) {
-    const response = await fetch(`${config.apiUrl}/divisions?season_id=${seasonId}`, {
+    const response = await fetch(`${API_URL}/divisions?season_id=${seasonId}`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });
@@ -34,7 +34,7 @@ async function fetchDivisions(seasonId) {
 }
 
 async function fetchDivisionStandings(divisionId) {
-    const response = await fetch(`${config.apiUrl}/division?id=${divisionId}`, {
+    const response = await fetch(`${API_URL}/division?id=${divisionId}`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });
@@ -43,7 +43,7 @@ async function fetchDivisionStandings(divisionId) {
 }
 
 async function fetchWeekGames(week, seasonId) {
-    const response = await fetch(`${config.apiUrl}/games/week?week=${week}&season_id=${seasonId}`, {
+    const response = await fetch(`${API_URL}/games/week?week=${week}&season_id=${seasonId}`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 const DAYS_FR = {
     'lundi': 1,
@@ -86,7 +86,7 @@ module.exports = {
             }
 
             // Appeler l'API pour créer la proposition
-            const response = await fetch(`${config.apiUrl}/match-proposals`, {
+            const response = await fetch(`${API_URL}/match-proposals`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

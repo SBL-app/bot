@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,7 +24,7 @@ module.exports = {
             // Faire les 3 requêtes en parallèle pour optimiser les performances
             const [divisionResponse, gamesResponse, statsResponse] = await Promise.allSettled([
                 // 1. Informations de base de la division
-                fetch(`${config.apiUrl}/division/${divisionId}`, {
+                fetch(`${API_URL}/division/${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -33,7 +33,7 @@ module.exports = {
                     signal: AbortSignal.timeout(15000)
                 }),
                 // 2. Matchs de la division
-                fetch(`${config.apiUrl}/games/${divisionId}`, {
+                fetch(`${API_URL}/games/${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -42,7 +42,7 @@ module.exports = {
                     signal: AbortSignal.timeout(15000)
                 }),
                 // 3. Statistiques des équipes
-                fetch(`${config.apiUrl}/teamStats/division/${divisionId}`, {
+                fetch(`${API_URL}/teamStats/division/${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -315,9 +315,9 @@ module.exports = {
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
                     { name: 'URLs tentées', value: [
-                        `${config.apiUrl}/division/${interaction.options.getInteger('id')}`,
-                        `${config.apiUrl}/games/${interaction.options.getInteger('id')}`,
-                        `${config.apiUrl}/teamStats/division/${interaction.options.getInteger('id')}`
+                        `${API_URL}/division/${interaction.options.getInteger('id')}`,
+                        `${API_URL}/games/${interaction.options.getInteger('id')}`,
+                        `${API_URL}/teamStats/division/${interaction.options.getInteger('id')}`
                     ].join('\n'), inline: false }
                 )
                 .setTimestamp()

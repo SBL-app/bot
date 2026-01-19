@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -79,7 +79,7 @@ module.exports = {
             }));
 
             // Appeler l'API pour inscrire l'équipe
-            const response = await fetch(`${config.apiUrl}/teams/register`, {
+            const response = await fetch(`${API_URL}/teams/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

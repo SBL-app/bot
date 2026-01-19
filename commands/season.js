@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,7 +19,7 @@ module.exports = {
         
         try {
             const seasonId = interaction.options.getInteger('id');
-            const apiUrl = `${config.apiUrl}/season/${seasonId}`;
+            const apiUrl = `${API_URL}/season/${seasonId}`;
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API
@@ -168,7 +168,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Détails de la saison')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${config.apiUrl}/season/${interaction.options.getInteger('id')}`, inline: false }
+                    { name: 'URL tentée', value: `${API_URL}/season/${interaction.options.getInteger('id')}`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

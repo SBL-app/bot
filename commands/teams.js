@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,7 +21,7 @@ module.exports = {
             const pageParam = interaction.options.getInteger('page') || 1;
             const teamsPerPage = 10; // Nombre d'équipes par page
             
-            const apiUrl = `${config.apiUrl}/teams`;
+            const apiUrl = `${API_URL}/teams`;
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API
@@ -348,7 +348,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Équipes')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${config.apiUrl}/teams`, inline: false }
+                    { name: 'URL tentée', value: `${API_URL}/teams`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

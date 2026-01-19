@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,7 +11,7 @@ module.exports = {
 
         try {
             // Récupérer les propositions de l'utilisateur
-            const response = await fetch(`${config.apiUrl}/match-proposals/pending?discord_id=${interaction.user.id}`, {
+            const response = await fetch(`${API_URL}/match-proposals/pending?discord_id=${interaction.user.id}`, {
                 headers: {
                     'User-Agent': 'SBL-Discord-Bot',
                     'Accept': 'application/json'

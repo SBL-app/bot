@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const config = require('../config.json');
+const { API_URL } = require('../apiConfig');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API
-            const response = await fetch(config.apiUrl, {
+            const response = await fetch(API_URL, {
                 method: 'GET',
                 headers: {
                     'User-Agent': 'SBL-Discord-Bot'
@@ -30,12 +30,12 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(statusColor)
                 .setTitle('État de l\'API SBL')
-                .setURL(config.apiUrl)
+                .setURL(API_URL)
                 .addFields(
                     { name: 'Statut', value: statusText, inline: true },
                     { name: 'Code de réponse', value: response.status.toString(), inline: true },
                     { name: 'Temps de réponse', value: `${responseTime}ms`, inline: true },
-                    { name: 'URL', value: config.apiUrl, inline: false }
+                    { name: 'URL', value: API_URL, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Dernière vérification' });
@@ -81,11 +81,11 @@ module.exports = {
             const errorEmbed = new EmbedBuilder()
                 .setColor(errorColor)
                 .setTitle('État de l\'API SBL')
-                .setURL(config.apiUrl)
+                .setURL(API_URL)
                 .addFields(
                     { name: 'Statut', value: '❌ Inaccessible', inline: true },
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL', value: config.apiUrl, inline: false }
+                    { name: 'URL', value: API_URL, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Dernière vérification' });

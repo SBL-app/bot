@@ -1,5 +1,17 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { API_URL } = require('../apiConfig');
+const fs = require('fs');
+const path = require('path');
+
+const settingsConfigPath = path.join(__dirname, '../config/settings.json');
+
+function loadSettingsConfig() {
+    try {
+        return JSON.parse(fs.readFileSync(settingsConfigPath, 'utf8'));
+    } catch (error) {
+        return { match_manager_role_id: null };
+    }
+}
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -13,6 +25,21 @@ module.exports = {
 
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
+
+        // Vérifier le rôle requis
+        const settings = loadSettingsConfig();
+        if (settings.match_manager_role_id) {
+            const member = interaction.member;
+            if (!member.roles.cache.has(settings.match_manager_role_id)) {
+                return await interaction.editReply({
+                    embeds: [new EmbedBuilder()
+                        .setColor(0xFF0000)
+                        .setTitle('Accès refusé')
+                        .setDescription(`Vous devez avoir le rôle <@&${settings.match_manager_role_id}> pour utiliser cette commande.`)
+                        .setTimestamp()]
+                });
+            }
+        }
 
         try {
             const proposalId = interaction.options.getInteger('id');

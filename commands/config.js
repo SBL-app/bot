@@ -106,7 +106,15 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('test-messages')
-                .setDescription('Envoyer les messages hebdomadaires maintenant (test)')),
+                .setDescription('Envoyer les messages hebdomadaires maintenant (test)'))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('role-gestionnaire-matchs')
+                .setDescription('Configurer le rôle requis pour planifier/accepter/refuser les matchs')
+                .addRoleOption(option =>
+                    option.setName('role')
+                        .setDescription('Rôle requis (laisser vide pour désactiver)')
+                        .setRequired(false))),
 
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
@@ -204,12 +212,18 @@ module.exports = {
                 ? `<#${channelsConfig.classement_channel_id}>`
                 : '*Non configuré*';
 
+            const matchManagerRole = settingsConfig.match_manager_role_id
+                ? `<@&${settingsConfig.match_manager_role_id}>`
+                : '*Non configuré (tout le monde)*';
+
             embed.addFields(
                 { name: 'Salon des matchs', value: matchsChannel, inline: true },
                 { name: 'Salon du classement', value: classementChannel, inline: true },
                 { name: '\u200B', value: '\u200B', inline: false },
                 { name: 'Jour butoir', value: DAYS_FR[settingsConfig.deadline_day] || settingsConfig.deadline_day, inline: true },
-                { name: 'Horaire par défaut', value: `${DAYS_FR[settingsConfig.default_match_day] || settingsConfig.default_match_day} à ${settingsConfig.default_match_time}`, inline: true }
+                { name: 'Horaire par défaut', value: `${DAYS_FR[settingsConfig.default_match_day] || settingsConfig.default_match_day} à ${settingsConfig.default_match_time}`, inline: true },
+                { name: '\u200B', value: '\u200B', inline: false },
+                { name: 'Rôle gestionnaire matchs', value: matchManagerRole, inline: true }
             );
 
             await interaction.reply({ embeds: [embed], ephemeral: true });
@@ -247,6 +261,25 @@ module.exports = {
                         .setTimestamp()]
                 });
             }
+        }
+        else if (subcommand === 'role-gestionnaire-matchs') {
+            const role = interaction.options.getRole('role');
+            const config = loadSettingsConfig();
+            config.match_manager_role_id = role ? role.id : null;
+            saveSettingsConfig(config);
+
+            const message = role
+                ? `Le rôle requis pour les commandes de match est maintenant <@&${role.id}>`
+                : 'Le rôle requis pour les commandes de match a été désactivé (tout le monde peut les utiliser)';
+
+            await interaction.reply({
+                embeds: [new EmbedBuilder()
+                    .setColor(0x00FF00)
+                    .setTitle('Configuration mise à jour')
+                    .setDescription(message)
+                    .setTimestamp()],
+                ephemeral: true
+            });
         }
     },
 };

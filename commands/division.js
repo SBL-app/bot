@@ -24,7 +24,7 @@ module.exports = {
             // Faire les 3 requêtes en parallèle pour optimiser les performances
             const [divisionResponse, gamesResponse, statsResponse] = await Promise.allSettled([
                 // 1. Informations de base de la division
-                fetch(`${API_URL}/division/${divisionId}`, {
+                fetch(`${API_URL}/divisions/${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -33,7 +33,7 @@ module.exports = {
                     signal: AbortSignal.timeout(15000)
                 }),
                 // 2. Matchs de la division
-                fetch(`${API_URL}/games/${divisionId}`, {
+                fetch(`${API_URL}/games?division_id=${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -42,7 +42,7 @@ module.exports = {
                     signal: AbortSignal.timeout(15000)
                 }),
                 // 3. Statistiques des équipes
-                fetch(`${API_URL}/teamStats/division/${divisionId}`, {
+                fetch(`${API_URL}/team-stats?division_id=${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',

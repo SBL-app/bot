@@ -27,7 +27,7 @@ module.exports = {
             const pageParam = interaction.options.getInteger('page') || 1;
             const weeksPerPage = 2; // Nombre de semaines par page
             
-            const apiUrl = `${API_URL}/games/${divisionId}`;
+            const apiUrl = `${API_URL}/games?division_id=${divisionId}`;
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API

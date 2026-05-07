@@ -23,7 +23,7 @@ module.exports = {
             
             // Effectuer les requêtes vers l'API en parallèle
             const [teamResponse, playersResponse] = await Promise.all([
-                fetch(`${API_URL}/team/${teamId}`, {
+                fetch(`${API_URL}/teams/${teamId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -31,7 +31,7 @@ module.exports = {
                     },
                     signal: AbortSignal.timeout(15000)
                 }),
-                fetch(`${API_URL}/players/${teamId}`, {
+                fetch(`${API_URL}/players?team_id=${teamId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',

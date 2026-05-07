@@ -19,7 +19,7 @@ module.exports = {
         
         try {
             const seasonId = interaction.options.getInteger('id');
-            const apiUrl = `${API_URL}/season/${seasonId}`;
+            const apiUrl = `${API_URL}/seasons/${seasonId}`;
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API

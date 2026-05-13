@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { API_URL } = require('../apiConfig');
+const { authenticatedFetch } = require('../utils/authenticatedApi');
 const fs = require('fs');
 const path = require('path');
 
@@ -37,7 +37,6 @@ function getNextDayDate(dayName, time) {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + daysUntilTarget);
 
-    // Parser l'heure
     const timeParts = time.match(/^(\d{1,2})[h:]?(\d{0,2})$/i);
     if (!timeParts) return null;
 
@@ -80,7 +79,6 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
-        // Vérifier le rôle requis
         const settings = loadSettingsConfig();
         if (settings.match_manager_role_id) {
             const member = interaction.member;
@@ -95,114 +93,87 @@ module.exports = {
             }
         }
 
-        try {
-            const gameId = interaction.options.getInteger('match');
-            const day = interaction.options.getString('jour');
-            const time = interaction.options.getString('heure');
+        const gameId = interaction.options.getInteger('match');
+        const day = interaction.options.getString('jour');
+        const time = interaction.options.getString('heure');
 
-            // Calculer la date proposée
-            const proposedDate = getNextDayDate(day, time);
-            if (!proposedDate) {
-                return await interaction.editReply({
-                    embeds: [new EmbedBuilder()
-                        .setColor(0xFF0000)
-                        .setTitle('Erreur')
-                        .setDescription('Format d\'heure invalide. Utilisez: 21h, 20h30, ou 21:00')
-                        .setTimestamp()]
-                });
-            }
-
-            // Appeler l'API pour créer la proposition
-            const response = await fetch(`${API_URL}/match-proposals`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'SBL-Discord-Bot',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    game_id: gameId,
-                    proposer_discord_id: interaction.user.id,
-                    proposed_date: proposedDate.toISOString()
-                }),
-                signal: AbortSignal.timeout(15000)
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                let errorMessage = data.error || 'Erreur inconnue';
-
-                if (errorMessage.includes('team captain')) {
-                    errorMessage = 'Vous devez être capitaine d\'une des équipes de ce match.';
-                } else if (errorMessage.includes('not found')) {
-                    errorMessage = 'Match ou utilisateur introuvable.';
-                } else if (errorMessage.includes('linked their Discord')) {
-                    errorMessage = 'Votre compte Discord n\'est pas lié. Connectez-vous sur le site web avec Discord.';
-                }
-
-                return await interaction.editReply({
-                    embeds: [new EmbedBuilder()
-                        .setColor(0xFF0000)
-                        .setTitle('Erreur')
-                        .setDescription(errorMessage)
-                        .setTimestamp()]
-                });
-            }
-
-            const proposal = data.proposal;
-            const game = proposal.game;
-
-            // Notifier le capitaine adverse en DM
-            if (data.receiver_discord_id) {
-                try {
-                    const receiver = await interaction.client.users.fetch(data.receiver_discord_id);
-                    const dmEmbed = new EmbedBuilder()
-                        .setColor(0x0099FF)
-                        .setTitle('Nouvelle proposition de match')
-                        .setDescription(`**${interaction.user.username}** vous propose une date pour le match **${game.team1} vs ${game.team2}**`)
-                        .addFields(
-                            { name: 'Date proposée', value: formatDate(proposedDate), inline: true },
-                            { name: 'Semaine', value: `${game.week}`, inline: true },
-                            { name: 'ID Proposition', value: `${proposal.id}`, inline: true }
-                        )
-                        .addFields({
-                            name: 'Actions',
-                            value: 'Utilisez `/accepter` ou `/refuser` avec l\'ID de la proposition, ou `/planifier` pour contre-proposer.',
-                            inline: false
-                        })
-                        .setTimestamp();
-
-                    await receiver.send({ embeds: [dmEmbed] });
-                } catch (dmError) {
-                    console.error('Erreur lors de l\'envoi du DM:', dmError);
-                }
-            }
-
-            // Confirmation à l'utilisateur
-            await interaction.editReply({
-                embeds: [new EmbedBuilder()
-                    .setColor(0x00FF00)
-                    .setTitle('Proposition envoyée')
-                    .setDescription(`Votre proposition pour **${game.team1} vs ${game.team2}** a été envoyée.`)
-                    .addFields(
-                        { name: 'Date proposée', value: formatDate(proposedDate), inline: true },
-                        { name: 'ID Proposition', value: `${proposal.id}`, inline: true }
-                    )
-                    .setTimestamp()]
-            });
-
-        } catch (error) {
-            console.error('Erreur lors de la planification:', error);
-
-            await interaction.editReply({
+        const proposedDate = getNextDayDate(day, time);
+        if (!proposedDate) {
+            return await interaction.editReply({
                 embeds: [new EmbedBuilder()
                     .setColor(0xFF0000)
                     .setTitle('Erreur')
-                    .setDescription(error.name === 'TimeoutError' ? 'L\'API ne répond pas.' : error.message)
+                    .setDescription('Format d\'heure invalide. Utilisez: 21h, 20h30, ou 21:00')
                     .setTimestamp()]
             });
         }
+
+        const result = await authenticatedFetch('/match-proposals', {
+            method: 'POST',
+            body: JSON.stringify({
+                game_id: gameId,
+                proposed_date: proposedDate.toISOString(),
+            }),
+        }, interaction.user.id);
+
+        if (result.error) {
+            let errorMessage = result.error;
+            if (errorMessage.includes('team captain')) {
+                errorMessage = 'Vous devez être capitaine d\'une des équipes de ce match.';
+            } else if (errorMessage.includes('not found')) {
+                errorMessage = 'Match ou utilisateur introuvable.';
+            } else if (errorMessage.includes('linked their Discord')) {
+                errorMessage = 'Votre compte Discord n\'est pas lié. Connectez-vous sur le site web avec Discord.';
+            }
+
+            return await interaction.editReply({
+                embeds: [new EmbedBuilder()
+                    .setColor(0xFF0000)
+                    .setTitle('Erreur')
+                    .setDescription(errorMessage)
+                    .setTimestamp()]
+            });
+        }
+
+        const proposal = result.data.proposal;
+        const game = proposal.game;
+
+        if (result.data.receiver_discord_id) {
+            try {
+                const receiver = await interaction.client.users.fetch(result.data.receiver_discord_id);
+                const dmEmbed = new EmbedBuilder()
+                    .setColor(0x0099FF)
+                    .setTitle('Nouvelle proposition de match')
+                    .setDescription(`**${interaction.user.username}** vous propose une date pour le match **${game.team1} vs ${game.team2}**`)
+                    .addFields(
+                        { name: 'Date proposée', value: formatDate(proposedDate), inline: true },
+                        { name: 'Semaine', value: `${game.week}`, inline: true },
+                        { name: 'ID Proposition', value: `${proposal.id}`, inline: true }
+                    )
+                    .addFields({
+                        name: 'Actions',
+                        value: 'Utilisez `/accepter` ou `/refuser` avec l\'ID de la proposition, ou `/planifier` pour contre-proposer.',
+                        inline: false
+                    })
+                    .setTimestamp();
+
+                await receiver.send({ embeds: [dmEmbed] });
+            } catch (dmError) {
+                console.error('Erreur lors de l\'envoi du DM:', dmError);
+            }
+        }
+
+        await interaction.editReply({
+            embeds: [new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('Proposition envoyée')
+                .setDescription(`Votre proposition pour **${game.team1} vs ${game.team2}** a été envoyée.`)
+                .addFields(
+                    { name: 'Date proposée', value: formatDate(proposedDate), inline: true },
+                    { name: 'ID Proposition', value: `${proposal.id}`, inline: true }
+                )
+                .setTimestamp()]
+        });
     },
 };
 

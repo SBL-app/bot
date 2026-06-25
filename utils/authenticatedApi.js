@@ -1,5 +1,6 @@
-const { API_URL } = require('../apiConfig');
+import config from '../config.json' with { type: 'json' };
 
+const API_URL = process.env.API_URL || config.apiUrl;
 const BOT_SECRET = process.env.API_SECRET;
 
 // Cache des tokens JWT par discordId
@@ -9,9 +10,6 @@ const tokenCache = new Map();
 // Marge de sécurité : renouveler 5 minutes avant expiration
 const EXPIRY_MARGIN_MS = 5 * 60 * 1000;
 
-/**
- * Décode le payload d'un JWT pour en extraire l'expiration
- */
 function getTokenExpiry(token) {
     try {
         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
@@ -21,10 +19,6 @@ function getTokenExpiry(token) {
     }
 }
 
-/**
- * Obtient un JWT valide pour un utilisateur Discord.
- * Utilise le cache si le token est encore valide, sinon en demande un nouveau.
- */
 async function getToken(discordId) {
     const cached = tokenCache.get(discordId);
     if (cached && cached.expiresAt > Date.now() + EXPIRY_MARGIN_MS) {
@@ -55,7 +49,6 @@ async function getToken(discordId) {
             errorMsg = data.detail || data.error || errorMsg;
         }
 
-        // Ne pas cacher un token invalide
         tokenCache.delete(discordId);
         throw new Error(errorMsg);
     }
@@ -71,15 +64,7 @@ async function getToken(discordId) {
     return token;
 }
 
-/**
- * Effectue une requête API authentifiée pour un utilisateur Discord.
- *
- * @param {string} endpoint - L'endpoint API (ex: '/teams/create-with-captain')
- * @param {object} options - Options fetch (method, body, headers...)
- * @param {string} discordId - L'ID Discord de l'utilisateur
- * @returns {Promise<{data: any, error: string|null, authError: boolean}>}
- */
-async function authenticatedFetch(endpoint, options = {}, discordId) {
+export async function authenticatedFetch(endpoint, options = {}, discordId) {
     try {
         const token = await getToken(discordId);
 
@@ -124,15 +109,11 @@ async function authenticatedFetch(endpoint, options = {}, discordId) {
         if (error.name === 'TimeoutError') {
             return { data: null, error: 'Timeout - L\'API ne répond pas', authError: false };
         }
-        // Les erreurs d'auth sont identifiées par le message
         const isAuthError = error.message.includes('authentification') || error.message.includes('API_SECRET');
         return { data: null, error: error.message, authError: isAuthError };
     }
 }
 
-/**
- * Parse la réponse API en format standardisé
- */
 async function parseResponse(response) {
     const contentType = response.headers.get('content-type');
 
@@ -156,5 +137,3 @@ async function parseResponse(response) {
 
     return { data, error: null, authError: false };
 }
-
-module.exports = { authenticatedFetch };

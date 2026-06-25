@@ -1,14 +1,19 @@
-const cron = require('node-cron');
-const { EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const { API_URL } = require('../apiConfig');
+import cron from 'node-cron';
+import { EmbedBuilder } from 'discord.js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import config from '../config.json' with { type: 'json' };
 
-const channelsConfigPath = path.join(__dirname, '../config/channels.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const API_URL = process.env.API_URL || config.apiUrl;
+const channelsConfigPath = join(__dirname, '../config/channels.json');
 
 function loadChannelsConfig() {
     try {
-        return JSON.parse(fs.readFileSync(channelsConfigPath, 'utf8'));
+        return JSON.parse(readFileSync(channelsConfigPath, 'utf8'));
     } catch (error) {
         console.error('Erreur lors du chargement de channels.json:', error);
         return { matchs_channel_id: null, classement_channel_id: null };
@@ -194,7 +199,7 @@ async function sendWeeklyStandingsMessage(client) {
     }
 }
 
-function initWeeklyScheduler(client) {
+export function initWeeklyScheduler(client) {
     // Exécuter tous les lundis à 8h00 (heure locale)
     cron.schedule('0 8 * * 1', async () => {
         console.log('[Scheduler] Exécution des messages hebdomadaires...');
@@ -207,16 +212,10 @@ function initWeeklyScheduler(client) {
     console.log('[Scheduler] Scheduler hebdomadaire initialisé (Lundi 8h00).');
 }
 
-// Fonction pour tester les messages manuellement
-async function sendWeeklyMessagesNow(client) {
+export async function sendWeeklyMessagesNow(client) {
     console.log('[Scheduler] Envoi manuel des messages hebdomadaires...');
     await sendWeeklyMatchesMessage(client);
     await sendWeeklyStandingsMessage(client);
 }
 
-module.exports = {
-    initWeeklyScheduler,
-    sendWeeklyMessagesNow,
-    sendWeeklyMatchesMessage,
-    sendWeeklyStandingsMessage
-};
+export { sendWeeklyMatchesMessage, sendWeeklyStandingsMessage };

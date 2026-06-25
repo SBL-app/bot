@@ -1,9 +1,14 @@
-const cron = require('node-cron');
-const fs = require('fs');
-const path = require('path');
-const { API_URL } = require('../apiConfig');
+import cron from 'node-cron';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import config from '../config.json' with { type: 'json' };
 
-const settingsConfigPath = path.join(__dirname, '../config/settings.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const API_URL = process.env.API_URL || config.apiUrl;
+const settingsConfigPath = join(__dirname, '../config/settings.json');
 
 const DAYS_INDEX = {
     'sunday': 0,
@@ -17,7 +22,7 @@ const DAYS_INDEX = {
 
 function loadSettingsConfig() {
     try {
-        return JSON.parse(fs.readFileSync(settingsConfigPath, 'utf8'));
+        return JSON.parse(readFileSync(settingsConfigPath, 'utf8'));
     } catch (error) {
         return { deadline_day: 'thursday', default_match_day: 'sunday', default_match_time: '21:00' };
     }
@@ -96,7 +101,6 @@ async function checkAndApplyDeadline(client) {
     const deadlineDayIndex = DAYS_INDEX[settings.deadline_day];
 
     // Vérifier si nous sommes le jour après le jour butoir
-    // Par exemple, si deadline = jeudi (4), on vérifie vendredi (5)
     const dayAfterDeadline = (deadlineDayIndex + 1) % 7;
 
     if (currentDayIndex !== dayAfterDeadline) {
@@ -120,7 +124,6 @@ async function checkAndApplyDeadline(client) {
 
     console.log(`[Deadline] ${unscheduledGames.length} match(s) non planifié(s) trouvé(s).`);
 
-    // Calculer la date par défaut
     const defaultDate = getNextDayOfWeek(settings.default_match_day, settings.default_match_time);
     if (!defaultDate) {
         console.error('[Deadline] Impossible de calculer la date par défaut.');
@@ -129,20 +132,17 @@ async function checkAndApplyDeadline(client) {
 
     console.log(`[Deadline] Application de l'horaire par défaut: ${defaultDate.toLocaleString('fr-FR')}`);
 
-    // Planifier chaque match non planifié
     for (const game of unscheduledGames) {
         const success = await scheduleGame(game.id, defaultDate);
         if (success) {
             console.log(`[Deadline] Match #${game.id} planifié avec succès.`);
-
-            // Notifier les capitaines si possible (TODO: récupérer les discord_id des capitaines)
         } else {
             console.error(`[Deadline] Échec de la planification du match #${game.id}.`);
         }
     }
 }
 
-function initDeadlineScheduler(client) {
+export function initDeadlineScheduler(client) {
     // Exécuter tous les jours à minuit (heure locale)
     cron.schedule('0 0 * * *', async () => {
         console.log('[Deadline] Exécution de la vérification du jour butoir...');
@@ -154,14 +154,9 @@ function initDeadlineScheduler(client) {
     console.log('[Deadline] Scheduler du jour butoir initialisé (minuit chaque jour).');
 }
 
-// Fonction pour tester manuellement
-async function runDeadlineCheckNow(client) {
+export async function runDeadlineCheckNow(client) {
     console.log('[Deadline] Exécution manuelle de la vérification...');
     await checkAndApplyDeadline(client);
 }
 
-module.exports = {
-    initDeadlineScheduler,
-    runDeadlineCheckNow,
-    checkAndApplyDeadline
-};
+export { checkAndApplyDeadline };

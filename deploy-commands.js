@@ -1,35 +1,47 @@
-const { REST, Routes } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const config = require('./config.json');
+import { REST, Routes } from 'discord.js';
+import { readdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import config from './config.json' with { type: "json" };
+
+const { token, applicationId } = config;
+
+// Obtenir __dirname dans un module ES6
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const commands = [];
 
-// Charger les commandes depuis le dossier commands
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+// Fonction pour charger les commandes
+async function loadCommands() {
+    // Charger les commandes depuis le dossier commands
+    const commandsPath = join(__dirname, 'commands');
+    const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    
-    if ('data' in command && 'execute' in command) {
-        commands.push(command.data.toJSON());
-    } else {
-        console.log(`[ATTENTION] La commande dans ${filePath} manque d'une propriété "data" ou "execute" requise.`);
+    for (const file of commandFiles) {
+        const filePath = join(commandsPath, file);
+        const command = await import(filePath);
+        
+        if ('data' in command && 'execute' in command) {
+            commands.push(command.data.toJSON());
+        } else {
+            console.log(`[ATTENTION] La commande dans ${filePath} manque d'une propriété "data" ou "execute" requise.`);
+        }
     }
 }
 
 // Déployer les commandes
-const rest = new REST({ version: '10' }).setToken(config.token);
+async function deployCommands() {
+    await loadCommands();
+    
+    const rest = new REST({ version: '10' }).setToken(token);
 
-(async () => {
     try {
         console.log(`Début du déploiement de ${commands.length} commandes slash...`);
 
         // Déployer les commandes globalement
         const data = await rest.put(
-            Routes.applicationCommands(config.applicationId),
+            Routes.applicationCommands(applicationId),
             { body: commands },
         );
 
@@ -37,4 +49,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     } catch (error) {
         console.error('Erreur lors du déploiement des commandes:', error);
     }
-})();
+}
+
+// Exécuter le déploiement
+deployCommands();

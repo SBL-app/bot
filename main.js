@@ -1,9 +1,16 @@
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const config = require('./config.json');
-const { initWeeklyScheduler } = require('./scheduler/weekly-messages');
-const { initDeadlineScheduler } = require('./scheduler/deadline-check');
+import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js';
+import { readdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import config from './config.json' with { type: "json" };
+import { initWeeklyScheduler } from './scheduler/weekly-messages.js';
+import { initDeadlineScheduler } from './scheduler/deadline-check.js';
+
+const { token, applicationId } = config;
+
+// Obtenir __dirname dans un module ES6
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Créer une nouvelle instance du client Discord
 const client = new Client({
@@ -18,20 +25,23 @@ const client = new Client({
 client.commands = new Collection();
 const commands = [];
 
-// Charger les commandes depuis le dossier commands
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+// Fonction pour charger les commandes
+async function loadCommands() {
+    // Charger les commandes depuis le dossier commands
+    const commandsPath = join(__dirname, 'commands');
+    const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    
-    if ('data' in command && 'execute' in command) {
-        client.commands.set(command.data.name, command);
-        commands.push(command.data.toJSON());
-        console.log(`Commande ${command.data.name} chargée.`);
-    } else {
-        console.log(`[ATTENTION] La commande dans ${filePath} manque d'une propriété "data" ou "execute" requise.`);
+    for (const file of commandFiles) {
+        const filePath = join(commandsPath, file);
+        const command = await import(filePath);
+        
+        if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+            commands.push(command.data.toJSON());
+            console.log(`Commande ${command.data.name} chargée.`);
+        } else {
+            console.log(`[ATTENTION] La commande dans ${filePath} manque d'une propriété "data" ou "execute" requise.`);
+        }
     }
 }
 
@@ -39,20 +49,22 @@ for (const file of commandFiles) {
 client.once('ready', async () => {
     console.log(`Bot connecté en tant que ${client.user.tag}!`);
     
+    // Charger les commandes
+    await loadCommands();
+    
     // Enregistrer les slash commands
-    const rest = new REST({ version: '10' }).setToken(config.token);
+    const rest = new REST({ version: '10' }).setToken(token);
     
     try {
         console.log('Début de l\'actualisation des commandes slash...');
         
         await rest.put(
-            Routes.applicationCommands(config.applicationId),
+            Routes.applicationCommands(applicationId),
             { body: commands }
         );
         
         console.log('Commandes slash actualisées avec succès!');
 
-        // Initialiser les schedulers
         initWeeklyScheduler(client);
         initDeadlineScheduler(client);
     } catch (error) {
@@ -518,4 +530,4 @@ client.on('error', (error) => {
 });
 
 // Connexion du bot
-client.login(config.token);
+client.login(token);

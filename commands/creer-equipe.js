@@ -18,9 +18,9 @@ module.exports = {
         try {
             const teamName = interaction.options.getString('nom');
 
-            const result = await authenticatedFetch('/teams/create-with-captain', {
+            const result = await authenticatedFetch('/teams', {
                 method: 'POST',
-                body: JSON.stringify({ name: teamName })
+                body: JSON.stringify({ name: teamName, captain: true })
             }, interaction.user.id);
 
             if (result.error) {
@@ -41,8 +41,8 @@ module.exports = {
                 .setColor(0x00FF00)
                 .setTitle('✅ Équipe créée avec succès!')
                 .addFields(
-                    { name: '🏷️ Nom', value: data.team.name, inline: true },
-                    { name: '🆔 ID', value: `${data.team.id}`, inline: true },
+                    { name: '🏷️ Nom', value: data.name, inline: true },
+                    { name: '🆔 ID', value: `${data.id}`, inline: true },
                     { name: '👑 Capitaine', value: `<@${interaction.user.id}>`, inline: true }
                 )
                 .setFooter({ text: 'Utilisez /ajouter-membre pour ajouter des joueurs' })

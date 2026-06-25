@@ -10,7 +10,7 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const result = await authenticatedFetch('/teams/my-teams', {
+            const result = await authenticatedFetch('/users/me/teams', {
                 method: 'GET'
             }, interaction.user.id);
 

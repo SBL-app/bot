@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { API_URL } = require('../apiConfig');
+const { authenticatedFetch } = require('../utils/authenticatedApi');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -10,19 +10,12 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            // Récupérer les propositions de l'utilisateur
-            const response = await fetch(`${API_URL}/match-proposals/pending?discord_id=${interaction.user.id}`, {
-                headers: {
-                    'User-Agent': 'SBL-Discord-Bot',
-                    'Accept': 'application/json'
-                },
-                signal: AbortSignal.timeout(15000)
-            });
+            const result = await authenticatedFetch(`/match-proposals?discord_id=${interaction.user.id}&status=pending`, {
+                method: 'GET'
+            }, interaction.user.id);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                let errorMessage = data.error || 'Erreur inconnue';
+            if (result.error) {
+                let errorMessage = result.error;
                 if (errorMessage.includes('not found')) {
                     errorMessage = 'Votre compte Discord n\'est pas lié. Connectez-vous sur le site web avec Discord.';
                 }
@@ -36,7 +29,7 @@ module.exports = {
                 });
             }
 
-            const { received, sent } = data;
+            const { received, sent } = result.data;
 
             const embed = new EmbedBuilder()
                 .setColor(0x0099FF)
@@ -126,7 +119,7 @@ module.exports = {
                 embeds: [new EmbedBuilder()
                     .setColor(0xFF0000)
                     .setTitle('Erreur')
-                    .setDescription(error.name === 'TimeoutError' ? 'L\'API ne répond pas.' : error.message)
+                    .setDescription(error.name === 'TimeoutError' ? 'L\'API ne répond pas.' : 'Erreur de connexion à l\'API')
                     .setTimestamp()]
             });
         }

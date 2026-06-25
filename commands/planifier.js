@@ -112,6 +112,7 @@ module.exports = {
             method: 'POST',
             body: JSON.stringify({
                 game_id: gameId,
+                proposer_discord_id: interaction.user.id,
                 proposed_date: proposedDate.toISOString(),
             }),
         }, interaction.user.id);

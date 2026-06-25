@@ -3,6 +3,8 @@ import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import config from './config.json' with { type: "json" };
+import { initWeeklyScheduler } from './scheduler/weekly-messages.js';
+import { initDeadlineScheduler } from './scheduler/deadline-check.js';
 
 const { token, applicationId } = config;
 
@@ -62,6 +64,9 @@ client.once('ready', async () => {
         );
         
         console.log('Commandes slash actualisées avec succès!');
+
+        initWeeklyScheduler(client);
+        initDeadlineScheduler(client);
     } catch (error) {
         console.error('Erreur lors de l\'actualisation des commandes:', error);
     }

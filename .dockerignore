@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# Dependencies
+node_modules/
+
+# Development
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Tests
+coverage/
+*.test.js
+*.spec.js
+
+# Documentation
+*.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# ESLint
+.eslintrc*
+eslint.config.*

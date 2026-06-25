@@ -92,6 +92,9 @@ module.exports = {
 ### ⚽ Matchs
 
 - `/matchs <division> [page]` - Affiche les matchs d'une division par semaine
+- `/schedule [division] [equipe]` - Affiche le planning des prochains matchs d'une division ou d'une équipe
+- `/standings <division>` - Affiche le classement actuel d'une division
+- `/result <match> <score1> <score2>` - Soumet le résultat d'un match (capitaine ; en attente de validation de l'adversaire)
 
 ## Navigation interactive
 

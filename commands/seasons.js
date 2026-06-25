@@ -1,45 +1,61 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { ApiClient, ApiError } from '../utils/apiClient.js';
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { API_URL, fetchAPI } = require('../apiConfig');
 
-export const data = new SlashCommandBuilder()
-    .setName('saisons')
-    .setDescription('Affiche la liste des saisons SBL')
-    .addIntegerOption(option => option.setName('page')
-        .setDescription('Numéro de page à afficher (optionnel)')
-        .setRequired(false)
-        .setMinValue(1));
-export async function execute(interaction) {
-    // Répondre immédiatement pour éviter le timeout seulement si ce n'est pas déjà fait
-    if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'Récupération des saisons...', ephemeral: true });
-    }
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('saisons')
+        .setDescription('Affiche la liste des saisons SBL')
+        .addIntegerOption(option =>
+            option.setName('page')
+                .setDescription('Numéro de page à afficher (optionnel)')
+                .setRequired(false)
+                .setMinValue(1)),
 
-    try {
-        const pageParam = interaction.options.getInteger('page') || 1;
-        const seasonsPerPage = 5; // Nombre de saisons par page
-
-        const apiClient = new ApiClient();
-        const result = await apiClient.getSeasons();
-        const seasons = result.data;
-        const responseTime = result.responseTime;
-
-        if (!Array.isArray(seasons)) {
-            throw new Error('Format de données non reconnu de l\'API');
+    async execute(interaction) {
+        // Répondre immédiatement pour éviter le timeout
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'Récupération des saisons...', ephemeral: true });
         }
 
-        if (seasons.length === 0) {
-            const emptyEmbed = new EmbedBuilder()
-                .setColor(0xFFA500)
-                .setTitle('📅 Saisons SBL')
-                .setDescription('Aucune saison trouvée dans l\'API')
-                .setTimestamp()
-                .setFooter({ text: `Récupéré en ${responseTime}ms` });
+        const startTime = Date.now();
+        const { data: seasons, error } = await fetchAPI('/seasons');
+        const responseTime = Date.now() - startTime;
 
-            await interaction.editReply({ content: null, embeds: [emptyEmbed] });
+        // Gestion des erreurs API
+        if (error) {
+            const errorEmbed = new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setTitle('❌ Erreur - Saisons')
+                .setDescription(error)
+                .addFields({ name: 'URL tentée', value: `${API_URL}/seasons`, inline: false })
+                .setTimestamp()
+                .setFooter({ text: 'Récupération échouée' });
+
+            await interaction.editReply({ content: null, embeds: [errorEmbed] });
             return;
         }
 
-        // Calculer la pagination
+        // Cas où aucune saison n'existe
+        if (!seasons || !Array.isArray(seasons) || seasons.length === 0) {
+            const emptyEmbed = new EmbedBuilder()
+                .setColor(0x0099FF)
+                .setTitle('📅 Saisons SBL')
+                .setDescription('Aucune saison n\'a encore été créée.')
+                .addFields({
+                    name: 'Information',
+                    value: 'Les saisons seront affichées ici une fois créées par les administrateurs.',
+                    inline: false
+                })
+                .setTimestamp()
+                .setFooter({ text: `Récupéré en ${responseTime}ms` });
+
+            await interaction.editReply({ content: null, embeds: [emptyEmbed], components: [] });
+            return;
+        }
+
+        // Pagination
+        const pageParam = interaction.options.getInteger('page') || 1;
+        const seasonsPerPage = 5;
         const totalPages = Math.ceil(seasons.length / seasonsPerPage);
         const currentPage = Math.min(pageParam, totalPages);
         const startIndex = (currentPage - 1) * seasonsPerPage;
@@ -54,7 +70,7 @@ export async function execute(interaction) {
             .setTimestamp()
             .setFooter({ text: `Récupéré en ${responseTime}ms` });
 
-        // Ajouter chaque saison de la page actuelle
+        // Ajouter chaque saison
         seasonsToShow.forEach(season => {
             let seasonInfo = '';
 
@@ -72,26 +88,21 @@ export async function execute(interaction) {
                 seasonInfo += `📊 **Progression:** ${progressBar} ${season.percentage}%\n`;
             }
 
-            // Ajouter le lien vers les détails
-            seasonInfo += `💡 **Détails:** Utilisez \`/saison id:${season.id}\` pour plus d'infos`;
-
-            if (!seasonInfo) {
-                seasonInfo = 'Aucune information disponible';
-            }
+            seasonInfo += `💡 **Détails:** \`/saison id:${season.id}\``;
 
             embed.addFields({
                 name: `${season.id}. ${season.name || `Saison ${season.id}`}`,
-                value: seasonInfo,
+                value: seasonInfo || 'Aucune information disponible',
                 inline: false
             });
         });
 
-        // Créer les boutons de navigation si nécessaire
+        // Boutons de navigation
         const components = [];
+
         if (totalPages > 1) {
             const row = new ActionRowBuilder();
 
-            // Bouton page précédente
             if (currentPage > 1) {
                 row.addComponents(
                     new ButtonBuilder()
@@ -101,7 +112,6 @@ export async function execute(interaction) {
                 );
             }
 
-            // Bouton informations de page
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId('seasons_page_info')
@@ -110,7 +120,6 @@ export async function execute(interaction) {
                     .setDisabled(true)
             );
 
-            // Bouton page suivante
             if (currentPage < totalPages) {
                 row.addComponents(
                     new ButtonBuilder()
@@ -123,11 +132,10 @@ export async function execute(interaction) {
             components.push(row);
         }
 
-        // Ajouter une deuxième rangée avec des boutons pour accéder aux détails des saisons
+        // Boutons détails des saisons
         if (seasonsToShow.length > 0) {
             const detailsRow = new ActionRowBuilder();
 
-            // Ajouter jusqu'à 5 boutons pour les saisons affichées
             seasonsToShow.slice(0, 5).forEach(season => {
                 detailsRow.addComponents(
                     new ButtonBuilder()
@@ -146,50 +154,11 @@ export async function execute(interaction) {
             embeds: [embed],
             components: components
         });
+    },
+};
 
-    } catch (error) {
-        let errorMessage = 'Erreur inconnue';
-
-        if (error instanceof ApiError) {
-            if (error.isNotFound()) {
-                errorMessage = 'Aucune saison trouvée';
-            } else if (error.isTimeout()) {
-                errorMessage = 'Timeout - L\'API ne répond pas dans les temps';
-            } else if (error.isServerError()) {
-                errorMessage = 'Erreur interne du serveur API';
-            } else {
-                errorMessage = `Erreur API: ${error.status} ${error.message}`;
-            }
-        } else if (error.name === 'TimeoutError') {
-            errorMessage = 'Timeout - L\'API ne répond pas dans les temps';
-        } else if (error.code === 'ENOTFOUND') {
-            errorMessage = 'Impossible de résoudre le nom de domaine';
-        } else if (error.code === 'ECONNREFUSED') {
-            errorMessage = 'Connexion refusée par le serveur';
-        } else {
-            errorMessage = error.message || 'Erreur de connexion à l\'API';
-        }
-
-        const errorEmbed = new EmbedBuilder()
-            .setColor(0xFF0000)
-            .setTitle('❌ Erreur - Saisons')
-            .addFields(
-                { name: 'Erreur', value: errorMessage, inline: false }
-            )
-            .setTimestamp()
-            .setFooter({ text: 'Récupération échouée' });
-
-        await interaction.editReply({ content: null, embeds: [errorEmbed] });
-    }
-}
-
-// Fonction utilitaire pour générer une barre de progression
 function generateProgressBar(percentage, length = 10) {
     const filled = Math.round((percentage / 100) * length);
     const empty = length - filled;
-    
-    const filledBar = '█'.repeat(filled);
-    const emptyBar = '░'.repeat(empty);
-    
-    return `${filledBar}${emptyBar}`;
+    return '█'.repeat(filled) + '░'.repeat(empty);
 }

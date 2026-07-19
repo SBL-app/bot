@@ -1,9 +1,9 @@
 const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
-const { EmbedBuilder } = require('discord.js');
 const { API_URL } = require('../apiConfig');
 const { DAYS_INDEX, getNextDayOfWeek } = require('../lib/date-utils');
+const { notifyCaptains } = require('./notify-captains');
 
 const settingsConfigPath = path.join(__dirname, '../config/settings.json');
 
@@ -59,39 +59,6 @@ async function scheduleGame(gameId, date) {
     } catch (error) {
         console.error(`[Deadline] Erreur schedule game ${gameId}:`, error);
         return false;
-    }
-}
-
-async function notifyCaptains(client, game, date) {
-    if (!client) return;
-
-    const captainDiscordIds = [game.team1_captain_discord, game.team2_captain_discord];
-    const alreadyNotified = new Set();
-
-    for (const discordId of captainDiscordIds) {
-        if (!discordId || alreadyNotified.has(discordId)) {
-            continue;
-        }
-        alreadyNotified.add(discordId);
-
-        try {
-            const user = await client.users.fetch(discordId);
-            const embed = new EmbedBuilder()
-                .setColor(0xFFA500)
-                .setTitle('⏰ Match planifié automatiquement')
-                .setDescription(
-                    `Faute de planification avant le jour butoir, votre match ` +
-                    `**${game.team1 || '?'} vs ${game.team2 || '?'}** a été programmé à l'horaire par défaut.`
-                )
-                .addFields({ name: 'Date', value: date.toLocaleString('fr-FR'), inline: true })
-                .setFooter({ text: 'Vous pouvez le replanifier avec /planifier si besoin.' })
-                .setTimestamp();
-
-            await user.send({ embeds: [embed] });
-            console.log(`[Deadline] Capitaine ${discordId} notifié pour le match #${game.id}.`);
-        } catch (error) {
-            console.error(`[Deadline] Échec de la notification du capitaine ${discordId}:`, error);
-        }
     }
 }
 
@@ -168,6 +135,5 @@ async function runDeadlineCheckNow(client) {
 module.exports = {
     initDeadlineScheduler,
     runDeadlineCheckNow,
-    checkAndApplyDeadline,
-    notifyCaptains
+    checkAndApplyDeadline
 };

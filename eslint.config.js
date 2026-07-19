@@ -27,11 +27,14 @@ module.exports = [
             'prefer-const': 'warn',
             // Erreur : le `var` est proscrit dans le nouveau code.
             'no-var': 'error',
+            // Usage intentionnel : suppression des caractères de contrôle dans
+            // l'assainissement des entrées (lib/validation.js).
+            'no-control-regex': 'off',
         },
     },
     {
-        // Fichiers de test : Vitest (ESM).
-        files: ['tests/**/*.js'],
+        // Fichiers de test et config Vitest : ESM.
+        files: ['tests/**/*.js', 'vitest.config.js'],
         languageOptions: {
             sourceType: 'module',
             globals: {

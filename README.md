@@ -10,10 +10,15 @@ Bot Discord utilisant les slash commands pour SBL.
    npm install
    ```
 
-3. Configurez le fichier `config.json` avec :
-   - `token` : Le token de votre bot Discord
-   - `applicationId` : L'ID de votre application Discord
-   - `apiUrl` : L'URL de votre API (ex: `https://api.example.com`)
+3. Configurez le bot. **En production**, utilisez des variables d'environnement
+   (recommandé, aucun secret sur disque) :
+   - `DISCORD_TOKEN` : le token du bot Discord
+   - `DISCORD_CLIENT_ID` : l'ID de l'application Discord
+   - `API_URL` : l'URL de l'API (ex: `https://api.example.com`)
+
+   **En développement local**, vous pouvez créer un `config.json` (ignoré par
+   git) avec `token`, `applicationId`, `apiUrl`. Les variables d'environnement
+   sont prioritaires sur ce fichier (voir `lib/config.js`).
 
 ## Utilisation
 
@@ -32,6 +37,25 @@ npm start
 ```bash
 npm run dev
 ```
+
+## Qualité, tests et CI/CD
+
+```bash
+npm run lint           # analyse statique (ESLint)
+npm test               # tests unitaires (Vitest)
+npm run test:coverage  # tests + couverture (seuil 80 %)
+```
+
+- **CI** (`.github/workflows/ci.yml`) : ESLint, tests + couverture, `npm audit`
+  et build de l'image Docker à chaque push / PR.
+- **CD** (`.github/workflows/cd.yml`) : déploiement SSH automatique sur `main`
+  (rebuild du service `bot` via docker compose). Secrets requis : `SSH_HOST`,
+  `SSH_USER`, `SSH_KEY`, `SSH_PORT` (optionnel), `DEPLOY_PATH`.
+- **Sécurité** : voir [`SECURITY.md`](SECURITY.md) (revue OWASP Top 10).
+
+Le code testé (fonctions pures) est isolé dans `lib/` :
+`config.js` (chargement des secrets), `date-utils.js` (calcul des échéances),
+`validation.js` (assainissement des entrées).
 
 ## Structure du projet
 

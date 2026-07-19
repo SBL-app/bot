@@ -1,8 +1,9 @@
 // API Configuration
-// Uses environment variable in production (Docker), falls back to config.json for local development
-const config = require('./config.json');
+// Uses environment variables in production (Docker), falls back to config.json
+// for local development. See lib/config.js.
+const config = require('./lib/config');
 
-const API_URL = process.env.API_URL || config.apiUrl;
+const API_URL = config.apiUrl;
 
 /**
  * Effectue une requête API avec gestion robuste des erreurs

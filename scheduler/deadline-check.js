@@ -2,18 +2,9 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const { API_URL } = require('../apiConfig');
+const { DAYS_INDEX, getNextDayOfWeek } = require('../lib/date-utils');
 
 const settingsConfigPath = path.join(__dirname, '../config/settings.json');
-
-const DAYS_INDEX = {
-    'sunday': 0,
-    'monday': 1,
-    'tuesday': 2,
-    'wednesday': 3,
-    'thursday': 4,
-    'friday': 5,
-    'saturday': 6
-};
 
 function loadSettingsConfig() {
     try {
@@ -21,25 +12,6 @@ function loadSettingsConfig() {
     } catch (error) {
         return { deadline_day: 'thursday', default_match_day: 'sunday', default_match_time: '21:00' };
     }
-}
-
-function getNextDayOfWeek(dayName, time, baseDate = new Date()) {
-    const targetDay = DAYS_INDEX[dayName.toLowerCase()];
-    if (targetDay === undefined) return null;
-
-    const result = new Date(baseDate);
-    const currentDay = result.getDay();
-    let daysUntilTarget = targetDay - currentDay;
-    if (daysUntilTarget <= 0) {
-        daysUntilTarget += 7;
-    }
-
-    result.setDate(result.getDate() + daysUntilTarget);
-
-    const timeParts = time.split(':');
-    result.setHours(parseInt(timeParts[0]) || 21, parseInt(timeParts[1]) || 0, 0, 0);
-
-    return result;
 }
 
 async function fetchCurrentSeasonWeek() {

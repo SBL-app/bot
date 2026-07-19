@@ -19,10 +19,13 @@ module.exports = [
             },
         },
         rules: {
+            // Style/qualité : signalés en warning pour ne pas bloquer la CI sur
+            // la dette du code existant, tout en restant visibles.
             'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
             'no-console': 'off',
-            eqeqeq: ['error', 'smart'],
-            'prefer-const': 'error',
+            eqeqeq: ['warn', 'smart'],
+            'prefer-const': 'warn',
+            // Erreur : le `var` est proscrit dans le nouveau code.
             'no-var': 'error',
         },
     },

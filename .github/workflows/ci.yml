@@ -51,9 +51,10 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      # OWASP A06 — composants vulnérables. N'échoue que sur une faille "high".
-      - name: npm audit (high)
-        run: npm audit --audit-level=high
+      # OWASP A06 — composants vulnérables. Ciblé sur les dépendances de
+      # PRODUCTION (les vulns de l'outillage de dev n'affectent pas le runtime).
+      - name: npm audit (production, high)
+        run: npm audit --omit=dev --audit-level=high
 
   docker-build:
     name: Build image Docker

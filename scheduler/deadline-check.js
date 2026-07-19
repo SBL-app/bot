@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { API_URL } = require('../apiConfig');
 const { DAYS_INDEX, getNextDayOfWeek } = require('../lib/date-utils');
+const { notifyCaptains } = require('./notify-captains');
 
 const settingsConfigPath = path.join(__dirname, '../config/settings.json');
 
@@ -106,8 +107,7 @@ async function checkAndApplyDeadline(client) {
         const success = await scheduleGame(game.id, defaultDate);
         if (success) {
             console.log(`[Deadline] Match #${game.id} planifié avec succès.`);
-
-            // Notifier les capitaines si possible (TODO: récupérer les discord_id des capitaines)
+            await notifyCaptains(client, game, defaultDate);
         } else {
             console.error(`[Deadline] Échec de la planification du match #${game.id}.`);
         }

@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const config = require('./config.json');
+const config = require('./lib/config');
 const { initWeeklyScheduler } = require('./scheduler/weekly-messages');
 const { initDeadlineScheduler } = require('./scheduler/deadline-check');
 
@@ -517,5 +517,7 @@ client.on('error', (error) => {
     console.error('Erreur du client Discord:', error);
 });
 
-// Connexion du bot
+// Connexion du bot — échoue immédiatement avec un message clair si un secret
+// obligatoire est absent (plutôt qu'une erreur cryptique de discord.js).
+config.assertConfig(['token', 'applicationId']);
 client.login(config.token);

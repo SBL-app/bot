@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
+const { EmbedBuilder } = require('discord.js');
 const { API_URL } = require('../apiConfig');
 const { DAYS_INDEX, getNextDayOfWeek } = require('../lib/date-utils');
 
@@ -61,6 +62,39 @@ async function scheduleGame(gameId, date) {
     }
 }
 
+async function notifyCaptains(client, game, date) {
+    if (!client) return;
+
+    const captainDiscordIds = [game.team1_captain_discord, game.team2_captain_discord];
+    const alreadyNotified = new Set();
+
+    for (const discordId of captainDiscordIds) {
+        if (!discordId || alreadyNotified.has(discordId)) {
+            continue;
+        }
+        alreadyNotified.add(discordId);
+
+        try {
+            const user = await client.users.fetch(discordId);
+            const embed = new EmbedBuilder()
+                .setColor(0xFFA500)
+                .setTitle('⏰ Match planifié automatiquement')
+                .setDescription(
+                    `Faute de planification avant le jour butoir, votre match ` +
+                    `**${game.team1 || '?'} vs ${game.team2 || '?'}** a été programmé à l'horaire par défaut.`
+                )
+                .addFields({ name: 'Date', value: date.toLocaleString('fr-FR'), inline: true })
+                .setFooter({ text: 'Vous pouvez le replanifier avec /planifier si besoin.' })
+                .setTimestamp();
+
+            await user.send({ embeds: [embed] });
+            console.log(`[Deadline] Capitaine ${discordId} notifié pour le match #${game.id}.`);
+        } catch (error) {
+            console.error(`[Deadline] Échec de la notification du capitaine ${discordId}:`, error);
+        }
+    }
+}
+
 async function checkAndApplyDeadline(client) {
     const settings = loadSettingsConfig();
     const today = new Date();
@@ -106,8 +140,7 @@ async function checkAndApplyDeadline(client) {
         const success = await scheduleGame(game.id, defaultDate);
         if (success) {
             console.log(`[Deadline] Match #${game.id} planifié avec succès.`);
-
-            // Notifier les capitaines si possible (TODO: récupérer les discord_id des capitaines)
+            await notifyCaptains(client, game, defaultDate);
         } else {
             console.error(`[Deadline] Échec de la planification du match #${game.id}.`);
         }
@@ -135,5 +168,6 @@ async function runDeadlineCheckNow(client) {
 module.exports = {
     initDeadlineScheduler,
     runDeadlineCheckNow,
-    checkAndApplyDeadline
+    checkAndApplyDeadline,
+    notifyCaptains
 };

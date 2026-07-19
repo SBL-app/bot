@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { notifyCaptains } from '../scheduler/deadline-check.js';
+// Import par défaut : `discord.js` requis par le module empêche Vitest de
+// détecter statiquement les exports nommés du CJS ; le défaut expose module.exports.
+import notifyCaptainsModule from '../scheduler/notify-captains.js';
+
+const { notifyCaptains } = notifyCaptainsModule;
 
 function makeClient(sendImpl) {
     const send = sendImpl ?? vi.fn().mockResolvedValue(undefined);

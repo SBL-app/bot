@@ -43,4 +43,4 @@ async function notifyCaptains(client, game, date) {
     }
 }
 
-exports.notifyCaptains = notifyCaptains;
+module.exports = { notifyCaptains };

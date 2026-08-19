@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:20-alpine
+FROM node:26-alpine
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S botgroup && \

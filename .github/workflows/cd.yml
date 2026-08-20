@@ -69,6 +69,91 @@ jobs:
           docker image prune -f
           REMOTE
 
+      # `docker compose up -d` rend la main dès que le conteneur est lancé, pas
+      # quand il tient debout. Le 2026-08-20, ce workflow s'est déclaré vert
+      # alors que `sbl-bot` était en « Restarting (1) » — un bot Discord mort
+      # ne se remarque pas tout de suite, et rien ici ne le signalait.
+      #
+      # Pas de endpoint de santé sur un bot : le critère est la stabilité du
+      # conteneur. `up --build` venant de le recréer, tout redémarrage compté
+      # ici est postérieur au déploiement, donc un crash.
+      - name: Verify the bot container stays up
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.SSH_PORT || '22' }}" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}' bash -s" <<'REMOTE'
+          set -uo pipefail
+          cd "$DEPLOY_PATH"
+
+          cid=$(docker compose ps -q bot || true)
+          if [ -z "$cid" ]; then
+            echo "::error::conteneur bot introuvable après 'docker compose up'"
+            exit 1
+          fi
+
+          stable=0
+          for attempt in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Status}}' "$cid")
+            restarts=$(docker inspect -f '{{.RestartCount}}' "$cid")
+
+            if [ "$restarts" -gt 0 ]; then
+              echo "::error::le conteneur bot a redémarré $restarts fois depuis sa recréation : il plante au démarrage"
+              exit 1
+            fi
+
+            case "$status" in
+              running)
+                stable=$((stable + 1))
+                # Un bot Discord peut démarrer puis mourir sur l'authentification
+                # ou une commande invalide : trois relevés espacés valent mieux
+                # qu'un seul.
+                if [ "$stable" -ge 3 ]; then
+                  echo "conteneur bot stable (running, 0 redémarrage)"
+                  exit 0
+                fi
+                ;;
+              restarting|created)
+                stable=0
+                echo "bot est '$status' (tentative $attempt/30)…"
+                ;;
+              exited|dead)
+                echo "::error::le conteneur bot est '$status'"
+                exit 1
+                ;;
+            esac
+            sleep 2
+          done
+
+          echo "::error::le conteneur bot n'est pas devenu stable en 60 s"
+          exit 1
+          REMOTE
+
+      # Les logs ne sont publiés que sur un déclenchement manuel : ce dépôt est
+      # public et la sortie d'un bot Discord peut contenir des jetons ou des
+      # identifiants d'utilisateurs. Le filtrage ci-dessous couvre les formes
+      # connues sans prétendre à l'exhaustivité — d'où la restriction.
+      - name: Collect bot diagnostics
+        if: failure() && github.event_name == 'workflow_dispatch'
+        run: |
+          set -uo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${{ secrets.SSH_PORT || '22' }}" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}' bash -s" 2>&1 <<'REMOTE' \
+            | sed -E \
+                -e 's#(://[^:/@[:space:]]*):[^@[:space:]]+@#\1:***@#g' \
+                -e 's#((DISCORD_TOKEN|DISCORD_BOT_SECRET|DISCORD_CLIENT_SECRET|API_KEY|TOKEN)[[:space:]]*[=:][[:space:]]*)[^[:space:]]+#\1***#gi' \
+            || true
+          set -uo pipefail
+          cd "$DEPLOY_PATH"
+
+          echo '--- docker compose ps ---'
+          docker compose ps || true
+
+          echo '--- docker compose logs bot (80 dernières lignes) ---'
+          docker compose logs --tail=80 --no-color bot || true
+          REMOTE
+
       - name: Clean up SSH key
         if: always()
         run: rm -f ~/.ssh/deploy_key

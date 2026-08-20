@@ -43,12 +43,31 @@ jobs:
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT || '22' }}" \
             ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/bot/"
 
+      # Quatre dépôts pilotent le même projet docker compose sur le même
+      # serveur. Un `up` concurrent recrée des conteneurs sous les pieds de
+      # l'autre, et `image prune -f` peut emporter les couches intermédiaires
+      # d'un build en cours. La clé `concurrency:` ci-dessus ne protège que de
+      # ce dépôt : ses groupes sont propres à un dépôt et ne se voient pas
+      # entre eux. D'où un verrou côté serveur, partagé avec `infrastructure`,
+      # `api` et `SBL-app`.
       - name: Rebuild & restart service
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key -p "${{ secrets.SSH_PORT || '22' }}" \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "cd '${{ secrets.DEPLOY_PATH }}' && docker compose up -d --build bot && docker image prune -f"
+            "DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          exec 9>/tmp/sbl-deploy.lock
+          if ! flock -w 300 9; then
+            echo "::error::verrou de déploiement non obtenu après 300 s : un autre déploiement est en cours"
+            exit 1
+          fi
+
+          cd "$DEPLOY_PATH"
+          docker compose up -d --build bot
+          docker image prune -f
+          REMOTE
 
       - name: Clean up SSH key
         if: always()

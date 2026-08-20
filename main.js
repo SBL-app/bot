@@ -4,6 +4,7 @@ const path = require('path');
 const config = require('./lib/config');
 const { initWeeklyScheduler } = require('./scheduler/weekly-messages');
 const { initDeadlineScheduler } = require('./scheduler/deadline-check');
+const { initHeartbeat } = require('./monitoring/heartbeat');
 
 // Créer une nouvelle instance du client Discord
 const client = new Client({
@@ -38,7 +39,13 @@ for (const file of commandFiles) {
 // Event: Bot prêt
 client.once('ready', async () => {
     console.log(`Bot connecté en tant que ${client.user.tag}!`);
-    
+
+    // Démarrer la sonde de supervision avant l'enregistrement des slash
+    // commands : si cette étape échoue (rate limit Discord, token invalide),
+    // le bot doit tout de même être visible dans Uptime Kuma pour que
+    // l'incident remonte au lieu de rester silencieux.
+    initHeartbeat(client);
+
     // Enregistrer les slash commands
     const rest = new REST({ version: '10' }).setToken(config.token);
     

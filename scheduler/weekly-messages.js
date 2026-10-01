@@ -16,7 +16,7 @@ function loadChannelsConfig() {
 }
 
 async function fetchCurrentSeasonWeek() {
-    const response = await fetch(`${API_URL}/season/current/week`, {
+    const response = await fetch(`${API_URL}/seasons/current/week`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });
@@ -25,7 +25,7 @@ async function fetchCurrentSeasonWeek() {
 }
 
 async function fetchDivisions(seasonId) {
-    const response = await fetch(`${API_URL}/divisions?season_id=${seasonId}`, {
+    const response = await fetch(`${API_URL}/seasons/${seasonId}/divisions`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });
@@ -33,17 +33,8 @@ async function fetchDivisions(seasonId) {
     return await response.json();
 }
 
-async function fetchDivisionStandings(divisionId) {
-    const response = await fetch(`${API_URL}/division?id=${divisionId}`, {
-        headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(15000)
-    });
-    if (!response.ok) return null;
-    return await response.json();
-}
-
 async function fetchWeekGames(week, seasonId) {
-    const response = await fetch(`${API_URL}/games/week?week=${week}&season_id=${seasonId}`, {
+    const response = await fetch(`${API_URL}/games?week=${week}&season_id=${seasonId}`, {
         headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
     });
@@ -155,10 +146,10 @@ async function sendWeeklyStandingsMessage(client) {
             .setTimestamp();
 
         for (const division of divisions) {
-            const standings = await fetchDivisionStandings(division.id);
-            if (!standings || !standings.teams) continue;
+            // /seasons/{id}/divisions inclut déjà le classement de chaque division
+            if (!Array.isArray(division.teams)) continue;
 
-            const standingsText = standings.teams
+            const standingsText = [...division.teams]
                 .sort((a, b) => (b.points || 0) - (a.points || 0))
                 .slice(0, 10)
                 .map((team, index) => {

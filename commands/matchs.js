@@ -27,7 +27,7 @@ module.exports = {
             const pageParam = interaction.options.getInteger('page') || 1;
             const weeksPerPage = 2; // Nombre de semaines par page
             
-            const apiUrl = `${API_URL}/games/${divisionId}`;
+            const apiUrl = `${API_URL}/games?division_id=${divisionId}`;
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API
@@ -258,7 +258,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Matchs')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${API_URL}/games/${interaction.options.getInteger('division')}`, inline: false }
+                    { name: 'URL tentée', value: `${API_URL}/games?division_id=${interaction.options.getInteger('division')}`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

@@ -49,6 +49,20 @@ describe('fetchAPI', () => {
         expect(res.error).toBe('Introuvable');
     });
 
+    it('lit le détail des erreurs Problem+JSON', async () => {
+        fetch.mockResolvedValueOnce(
+            mockResponse({
+                ok: false,
+                status: 404,
+                contentType: 'application/problem+json',
+                json: { title: 'Not Found', detail: 'Season not found' },
+            }),
+        );
+        const res = await fetchAPI('/seasons/999');
+        expect(res.status).toBe(404);
+        expect(res.error).toBe('Season not found');
+    });
+
     it('gère un timeout', async () => {
         const err = new Error('timeout');
         err.name = 'TimeoutError';

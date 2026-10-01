@@ -19,7 +19,7 @@ module.exports = {
         
         try {
             const seasonId = interaction.options.getInteger('id');
-            const apiUrl = `${API_URL}/season/${seasonId}`;
+            const apiUrl = `${API_URL}/seasons/${seasonId}`;
             const startTime = Date.now();
             
             // Effectuer la requête vers l'API
@@ -168,7 +168,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Détails de la saison')
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
-                    { name: 'URL tentée', value: `${API_URL}/season/${interaction.options.getInteger('id')}`, inline: false }
+                    { name: 'URL tentée', value: `${API_URL}/seasons/${interaction.options.getInteger('id')}`, inline: false }
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

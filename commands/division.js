@@ -24,7 +24,7 @@ module.exports = {
             // Faire les 3 requêtes en parallèle pour optimiser les performances
             const [divisionResponse, gamesResponse, statsResponse] = await Promise.allSettled([
                 // 1. Informations de base de la division
-                fetch(`${API_URL}/division/${divisionId}`, {
+                fetch(`${API_URL}/divisions/${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -33,7 +33,7 @@ module.exports = {
                     signal: AbortSignal.timeout(15000)
                 }),
                 // 2. Matchs de la division
-                fetch(`${API_URL}/games/${divisionId}`, {
+                fetch(`${API_URL}/games?division_id=${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -42,7 +42,7 @@ module.exports = {
                     signal: AbortSignal.timeout(15000)
                 }),
                 // 3. Statistiques des équipes
-                fetch(`${API_URL}/teamStats/division/${divisionId}`, {
+                fetch(`${API_URL}/team-stats?division_id=${divisionId}`, {
                     method: 'GET',
                     headers: {
                         'User-Agent': 'SBL-Discord-Bot',
@@ -105,8 +105,8 @@ module.exports = {
             // Informations de base de la division
             let divisionInfo = '';
             divisionInfo += `🆔 **ID:** ${division.id}\n`;
-            if (division.season) {
-                divisionInfo += `📅 **Saison:** ${division.season}\n`;
+            if (division.season_name || division.season) {
+                divisionInfo += `📅 **Saison:** ${division.season_name || division.season}\n`;
             }
             if (division.description) {
                 divisionInfo += `📝 **Description:** ${division.description}\n`;
@@ -265,7 +265,7 @@ module.exports = {
             );
             
             // Bouton pour retourner aux divisions de la saison
-            if (division.season) {
+            if (division.season_name || division.season) {
                 actionRow.addComponents(
                     new ButtonBuilder()
                         .setCustomId(`divisions_season_${division.season}`)
@@ -315,9 +315,9 @@ module.exports = {
                 .addFields(
                     { name: 'Erreur', value: errorMessage, inline: false },
                     { name: 'URLs tentées', value: [
-                        `${API_URL}/division/${interaction.options.getInteger('id')}`,
-                        `${API_URL}/games/${interaction.options.getInteger('id')}`,
-                        `${API_URL}/teamStats/division/${interaction.options.getInteger('id')}`
+                        `${API_URL}/divisions/${interaction.options.getInteger('id')}`,
+                        `${API_URL}/games?division_id=${interaction.options.getInteger('id')}`,
+                        `${API_URL}/team-stats?division_id=${interaction.options.getInteger('id')}`
                     ].join('\n'), inline: false }
                 )
                 .setTimestamp()

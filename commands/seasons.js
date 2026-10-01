@@ -18,7 +18,7 @@ module.exports = {
         }
 
         const startTime = Date.now();
-        const { data: seasons, error } = await fetchAPI('/season');
+        const { data: seasons, error } = await fetchAPI('/seasons');
         const responseTime = Date.now() - startTime;
 
         // Gestion des erreurs API
@@ -27,7 +27,7 @@ module.exports = {
                 .setColor(0xFF0000)
                 .setTitle('❌ Erreur - Saisons')
                 .setDescription(error)
-                .addFields({ name: 'URL tentée', value: `${API_URL}/season`, inline: false })
+                .addFields({ name: 'URL tentée', value: `${API_URL}/seasons`, inline: false })
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });
 

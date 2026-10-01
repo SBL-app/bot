@@ -41,7 +41,7 @@ module.exports = {
         const divisionId = interaction.options.getInteger('division');
         const startTime = Date.now();
 
-        const { data: games, error } = await fetchAPI(`/games/${divisionId}`);
+        const { data: games, error } = await fetchAPI(`/games?division_id=${divisionId}`);
         const responseTime = Date.now() - startTime;
 
         if (error) {
@@ -50,7 +50,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Planning')
                 .addFields(
                     { name: 'Erreur', value: error, inline: false },
-                    { name: 'URL tentée', value: `${API_URL}/games/${divisionId}`, inline: false },
+                    { name: 'URL tentée', value: `${API_URL}/games?division_id=${divisionId}`, inline: false },
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

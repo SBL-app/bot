@@ -11,7 +11,7 @@ module.exports = {
 
         try {
             // Récupérer les propositions de l'utilisateur
-            const response = await fetch(`${API_URL}/match-proposals/pending?discord_id=${interaction.user.id}`, {
+            const response = await fetch(`${API_URL}/match-proposals?discord_id=${interaction.user.id}&status=pending`, {
                 headers: {
                     'User-Agent': 'SBL-Discord-Bot',
                     'Accept': 'application/json'
@@ -22,7 +22,7 @@ module.exports = {
             const data = await response.json();
 
             if (!response.ok) {
-                let errorMessage = data.error || 'Erreur inconnue';
+                let errorMessage = data.error || data.detail || 'Erreur inconnue';
                 if (errorMessage.includes('not found')) {
                     errorMessage = 'Votre compte Discord n\'est pas lié. Connectez-vous sur le site web avec Discord.';
                 }

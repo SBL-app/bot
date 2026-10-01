@@ -17,7 +17,7 @@ function loadSettingsConfig() {
 
 async function fetchCurrentSeasonWeek() {
     try {
-        const response = await fetch(`${API_URL}/season/current/week`, {
+        const response = await fetch(`${API_URL}/seasons/current/week`, {
             headers: { 'User-Agent': 'SBL-Discord-Bot', 'Accept': 'application/json' },
             signal: AbortSignal.timeout(15000)
         });

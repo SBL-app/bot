@@ -35,7 +35,7 @@ module.exports = {
         const divisionId = interaction.options.getInteger('division');
         const startTime = Date.now();
 
-        const { data: stats, error } = await fetchAPI(`/teamStats/division/${divisionId}`);
+        const { data: stats, error } = await fetchAPI(`/team-stats?division_id=${divisionId}`);
         const responseTime = Date.now() - startTime;
 
         if (error) {
@@ -44,7 +44,7 @@ module.exports = {
                 .setTitle('❌ Erreur - Classement')
                 .addFields(
                     { name: 'Erreur', value: error, inline: false },
-                    { name: 'URL tentée', value: `${API_URL}/teamStats/division/${divisionId}`, inline: false },
+                    { name: 'URL tentée', value: `${API_URL}/team-stats?division_id=${divisionId}`, inline: false },
                 )
                 .setTimestamp()
                 .setFooter({ text: 'Récupération échouée' });

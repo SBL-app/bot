@@ -29,7 +29,7 @@ async function fetchAPI(endpoint, options = {}) {
         const contentType = response.headers.get('content-type');
 
         // Vérifier si la réponse est du JSON
-        if (!contentType || !contentType.includes('application/json')) {
+        if (!contentType || !contentType.includes('json')) {
             // Essayer de lire le texte pour le debug
             const text = await response.text();
             console.error(`[API] Réponse non-JSON reçue de ${url}:`, text.substring(0, 200));
@@ -46,7 +46,7 @@ async function fetchAPI(endpoint, options = {}) {
         if (!response.ok) {
             return {
                 data: null,
-                error: data.error || `Erreur API: ${response.status}`,
+                error: data.error || data.detail || `Erreur API: ${response.status}`,
                 status: response.status
             };
         }

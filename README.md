@@ -104,3 +104,7 @@ Le bot propose une navigation interactive avec des boutons :
 - Boutons pour accéder rapidement aux détails
 - Retour facile vers les vues précédentes
 - Accès direct aux divisions et matchs depuis les saisons
+
+## Notifications Discord
+
+Le canal Discord poste dans un salon via webhook s'il y a `DISCORD_WEBHOOK_URL` (`https://discord.com/api/webhooks/<id>/<token>`) ; appeler `registerDiscordChannelFromEnv()` au démarrage. Si l'utilisateur porte un `discordId`, il est mentionné.

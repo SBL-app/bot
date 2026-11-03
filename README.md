@@ -104,3 +104,7 @@ Le bot propose une navigation interactive avec des boutons :
 - Boutons pour accéder rapidement aux détails
 - Retour facile vers les vues précédentes
 - Accès direct aux divisions et matchs depuis les saisons
+
+## Notifications par mail
+
+Le canal mail (SMTP via nodemailer) s'active si `SMTP_URL` (ex. `smtps://user:pass@smtp.exemple.fr`) et `MAIL_FROM` (ex. `SBL <no-reply@exemple.fr>`) sont définis ; appeler `registerMailChannelFromEnv()` au démarrage. Les utilisateurs doivent porter un champ `email`.

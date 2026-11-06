@@ -108,3 +108,7 @@ Le bot propose une navigation interactive avec des boutons :
 ## Notifications par mail
 
 Le canal mail (SMTP via nodemailer) s'active si `SMTP_URL` (ex. `smtps://user:pass@smtp.exemple.fr`) et `MAIL_FROM` (ex. `SBL <no-reply@exemple.fr>`) sont définis ; appeler `registerMailChannelFromEnv()` au démarrage. Les utilisateurs doivent porter un champ `email`.
+
+## Notifications Discord
+
+Le canal Discord poste dans un salon via webhook s'il y a `DISCORD_WEBHOOK_URL` (`https://discord.com/api/webhooks/<id>/<token>`) ; appeler `registerDiscordChannelFromEnv()` au démarrage. Si l'utilisateur porte un `discordId`, il est mentionné.

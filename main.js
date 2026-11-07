@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import config from './config.json' with { type: "json" };
 import { initWeeklyScheduler } from './scheduler/weekly-messages.js';
 import { initDeadlineScheduler } from './scheduler/deadline-check.js';
+import { startNotifyServerFromEnv } from './lib/notify-server.js';
 
 const { token, applicationId } = config;
 
@@ -67,6 +68,7 @@ client.once('ready', async () => {
 
         initWeeklyScheduler(client);
         initDeadlineScheduler(client);
+        startNotifyServerFromEnv(client);
     } catch (error) {
         console.error('Erreur lors de l\'actualisation des commandes:', error);
     }

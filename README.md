@@ -105,10 +105,10 @@ Le bot propose une navigation interactive avec des boutons :
 - Retour facile vers les vues précédentes
 - Accès direct aux divisions et matchs depuis les saisons
 
-## Notifications par mail
+## Notifications Discord (appelées par l'API)
 
-Le canal mail (SMTP via nodemailer) s'active si `SMTP_URL` (ex. `smtps://user:pass@smtp.exemple.fr`) et `MAIL_FROM` (ex. `SBL <no-reply@exemple.fr>`) sont définis ; appeler `registerMailChannelFromEnv()` au démarrage. Les utilisateurs doivent porter un champ `email`.
+L'API décide quand et à qui notifier ; le bot ne fait que l'envoi Discord. Il expose `POST /notify` (JSON `{discordId, title, body, url}`, en-tête `X-Service-Key`) et répond 204, 400, 401 ou 502 (envoi MP impossible).
 
-## Notifications Discord
+Variables : `DISCORD_BOT_NOTIFY_KEY` (obligatoire, active le serveur, même valeur côté API), `NOTIFY_PORT` (défaut 3001), `FRONT_URL` (préfixe des liens `url`). Côté API : `DISCORD_BOT_NOTIFY_URL=http://<bot>:3001/notify`.
 
-Le canal Discord poste dans un salon via webhook s'il y a `DISCORD_WEBHOOK_URL` (`https://discord.com/api/webhooks/<id>/<token>`) ; appeler `registerDiscordChannelFromEnv()` au démarrage. Si l'utilisateur porte un `discordId`, il est mentionné.
+Les canaux mail et mobile sont gérés par l'API. Tests : `npm test`.
